@@ -1,0 +1,266 @@
+// =============================================================================
+//  EduFlow — Prisma Schema
+//  Mapping 1:1 với 13 bảng trong Chương 4 báo cáo
+//  + Bảng TAIKHOAN (mới) cho auth của cán bộ
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+//  AUTH
+// =============================================================================
+
+enum VaiTro {
+  ADMIN
+  PHONG_DAO_TAO
+  PHONG_TAI_CHINH
+  GIANG_VIEN
+  CO_VAN
+}
+
+enum TrangThaiTK {
+  ACTIVE
+  DISABLED
+}
+
+model TaiKhoan {
+  MaTK         Int         @id @default(autoincrement())
+  Username     String      @unique @db.VarChar(50)
+  PasswordHash String      @db.VarChar(255)
+  HoTen        String      @db.VarChar(100)
+  Email        String?     @db.VarChar(100)
+  VaiTro       VaiTro
+  TrangThai    TrangThaiTK @default(ACTIVE)
+  NgayTao      DateTime    @default(now())
+  NgayCapNhat  DateTime    @updatedAt
+  LastLoginAt  DateTime?
+
+  @@map("TAIKHOAN")
+}
+
+// =============================================================================
+//  MASTER DATA — Quê quán, Huyện, Ngành, Đối tượng ưu tiên
+// =============================================================================
+
+model Huyen {
+  MaHuyen          String    @id @db.VarChar(20)
+  TenHuyen         String    @db.VarChar(100)
+  LaVungSauVungXa  Boolean   @default(false)
+  queQuans         QueQuan[]
+
+  @@map("HUYEN")
+}
+
+model QueQuan {
+  MaQueQuan  String      @id @db.VarChar(20)
+  TenTinh    String      @db.VarChar(100)
+  MaHuyen    String      @db.VarChar(20)
+  huyen      Huyen       @relation(fields: [MaHuyen], references: [MaHuyen])
+  sinhViens  SinhVien[]
+
+  @@index([MaHuyen])
+  @@map("QUEQUAN")
+}
+
+model DoiTuongUuTien {
+  MaDoiTuong        String     @id @db.VarChar(20)
+  TenDoiTuong       String     @db.VarChar(100)
+  TiLeGiamHocPhi    Decimal    @default(0) @db.Decimal(4, 3) // 0.000 - 1.000
+  sinhViens         SinhVien[]
+
+  @@map("DOITUONGUUTIEN")
+}
+
+model NganhHoc {
+  MaNganh    String     @id @db.VarChar(20)
+  TenNganh   String     @db.VarChar(100)
+  MaKhoa     String     @db.VarChar(20)
+  sinhViens  SinhVien[]
+  chuongTrinhHocs ChuongTrinhHoc[]
+
+  @@map("NGANHHOC")
+}
+
+model LoaiMon {
+  MaLoaiMon    String   @id @db.VarChar(5)  // 'LT' | 'TH'
+  TenLoaiMon   String   @db.VarChar(50)
+  HeSoTinChi   Decimal  @default(1.0) @db.Decimal(4, 2)
+  monHocs      MonHoc[]
+
+  @@map("LOAIMON")
+}
+
+// =============================================================================
+//  CORE ENTITIES
+// =============================================================================
+
+enum GioiTinh {
+  Nam
+  Nu  @map("Nữ")
+}
+
+enum TrangThaiSV {
+  DANG_HOC
+  BAO_LUU
+  TOT_NGHIEP
+}
+
+model SinhVien {
+  MaSV         String         @id @db.VarChar(20)
+  TenSV        String         @db.VarChar(100)
+  NgaySinh     DateTime?      @db.Date
+  GioiTinh     GioiTinh?
+  TenLop       String?        @db.VarChar(50)
+  Email        String?        @db.VarChar(100)
+  TrangThai    TrangThaiSV    @default(DANG_HOC)
+
+  MaQueQuan    String?        @db.VarChar(20)
+  queQuan      QueQuan?       @relation(fields: [MaQueQuan], references: [MaQueQuan])
+
+  MaDoiTuong   String?        @db.VarChar(20)
+  doiTuongUuTien DoiTuongUuTien? @relation(fields: [MaDoiTuong], references: [MaDoiTuong])
+
+  MaNganh      String?        @db.VarChar(20)
+  nganh        NganhHoc?      @relation(fields: [MaNganh], references: [MaNganh])
+
+  NgayTao      DateTime       @default(now())
+  NgayCapNhat  DateTime       @updatedAt
+
+  phieuHocPhis PhieuHocPhi[]
+  phieuThus    PhieuThu[]
+
+  @@index([MaQueQuan])
+  @@index([MaDoiTuong])
+  @@index([MaNganh])
+  @@map("SINHVIEN")
+}
+
+model MonHoc {
+  MaMH         String       @id @db.VarChar(20)
+  TenMH        String       @db.VarChar(150)
+  MaLoaiMon    String       @db.VarChar(5)
+  loaiMon      LoaiMon      @relation(fields: [MaLoaiMon], references: [MaLoaiMon])
+
+  SoTiet       Int          @default(45)
+  SoTinChi     Int          @default(3)
+  HocPhi       Decimal      @default(0) @db.Decimal(12, 0)
+  HocKy        String       @db.VarChar(20)   // "HK1" | "HK2" | "HK3 (Hè)"
+  TenKhoa      String       @db.VarChar(100)
+  SiSoToiDa    Int          @default(50)
+  SiSoHienTai  Int          @default(0)
+
+  NgayTao      DateTime     @default(now())
+  NgayCapNhat  DateTime     @updatedAt
+
+  monHocMos    MonHocMo[]
+  chuongTrinhHocs ChuongTrinhHoc[]
+  phieuHocPhis PhieuHocPhi[]
+
+  @@index([MaLoaiMon])
+  @@map("MONHOC")
+}
+
+model HocKy {
+  MaHK         String        @id @db.VarChar(30)
+  TenHK        String        @db.VarChar(20)    // "HK1" | "HK2" | "HK3 (Hè)"
+  NamHoc       String        @db.VarChar(20)    // "2024-2025"
+  LaHienTai    Boolean       @default(false)    // chỉ có 1 HK active
+  NgayBatDau   DateTime?     @db.Date
+  NgayKetThuc  DateTime?     @db.Date
+
+  monHocMos    MonHocMo[]
+  phieuHocPhis PhieuHocPhi[]
+  phieuThus    PhieuThu[]
+
+  @@map("HOCKY")
+}
+
+model ChuongTrinhHoc {
+  MaCTH      Int       @id @default(autoincrement())
+  MaNganh    String    @db.VarChar(20)
+  nganh      NganhHoc  @relation(fields: [MaNganh], references: [MaNganh])
+  MaMH       String    @db.VarChar(20)
+  monHoc     MonHoc    @relation(fields: [MaMH], references: [MaMH])
+  HocKy      Int       // thứ tự HK trong chương trình đào tạo
+
+  @@unique([MaNganh, MaMH])
+  @@map("CHUONGTRINHHOC")
+}
+
+model MonHocMo {
+  MaHK    String  @db.VarChar(30)
+  hocKy   HocKy   @relation(fields: [MaHK], references: [MaHK])
+  MaMH    String  @db.VarChar(20)
+  monHoc  MonHoc  @relation(fields: [MaMH], references: [MaMH])
+
+  @@id([MaHK, MaMH])
+  @@map("MONHOCMO")
+}
+
+// =============================================================================
+//  HỌC PHÍ + ĐĂNG KÝ
+// =============================================================================
+
+// PhieuHocPhi = 1 môn 1 SV đã đăng ký trong 1 HK.
+// SoTienDangKy = học phí ban đầu (trước miễn giảm)
+// SoTienPhaiDong = sau khi áp tỉ lệ miễn giảm theo đối tượng ưu tiên
+model PhieuHocPhi {
+  MaPhieu         String    @id @db.VarChar(30)
+  MaSV            String    @db.VarChar(20)
+  sinhVien        SinhVien  @relation(fields: [MaSV], references: [MaSV])
+  MaMH            String    @db.VarChar(20)
+  monHoc          MonHoc    @relation(fields: [MaMH], references: [MaMH])
+  MaHK            String    @db.VarChar(30)
+  hocKy           HocKy     @relation(fields: [MaHK], references: [MaHK])
+
+  NgayLap         DateTime  @default(now())
+  SoTienDangKy    Decimal   @db.Decimal(12, 0)
+  SoTienPhaiDong  Decimal   @db.Decimal(12, 0)
+
+  @@unique([MaSV, MaMH, MaHK])
+  @@index([MaSV])
+  @@index([MaHK])
+  @@index([MaMH])
+  @@map("PHIEUHOCPHI")
+}
+
+// PhieuThu = 1 lần SV đóng tiền cho 1 HK.
+// SV có thể đóng nhiều lần → nhiều PhieuThu cùng (MaSV, MaHK).
+// Số tiền thu cộng dồn không được vượt tổng SoTienPhaiDong của các PhieuHocPhi tương ứng.
+model PhieuThu {
+  MaPhieuThu  String    @id @db.VarChar(30)
+  MaSV        String    @db.VarChar(20)
+  sinhVien    SinhVien  @relation(fields: [MaSV], references: [MaSV])
+  MaHK        String    @db.VarChar(30)
+  hocKy       HocKy     @relation(fields: [MaHK], references: [MaHK])
+
+  NgayThu     DateTime  @default(now())
+  SoTienThu   Decimal   @db.Decimal(12, 0)
+  GhiChu      String?   @db.VarChar(255)
+
+  @@index([MaSV, MaHK])
+  @@map("PHIEUTHU")
+}
+
+// =============================================================================
+//  THAM SỐ HỆ THỐNG
+// =============================================================================
+
+// Tham số động — đổi quy định = đổi giá trị bảng này, không cần deploy lại code.
+// Ví dụ: don_gia_tin_chi=500000, he_so_lt=1.0, he_so_th=1.5, ...
+model ThamSo {
+  TenThamSo  String   @id @db.VarChar(50)
+  GiaTri     String   @db.VarChar(255)    // lưu dạng string, convert ở runtime
+  KieuDuLieu String   @default("number") @db.VarChar(20)  // number | string | boolean
+  MoTa       String?  @db.VarChar(255)
+  NgayCapNhat DateTime @updatedAt
+
+  @@map("THAMSO")
+}

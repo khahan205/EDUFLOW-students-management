@@ -1,0 +1,206 @@
+{
+  "info": {
+    "name": "EduFlow API",
+    "description": "REST API cho hệ thống quản lý đăng ký môn học và thu học phí",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8000/api" },
+    { "key": "token", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login (admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  pm.collectionVariables.set('token', json.accessToken);",
+                  "  console.log('Token saved');",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        { "name": "Get current user", "request": { "method": "GET", "url": "{{baseUrl}}/auth/me" } },
+        {
+          "name": "Change password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/change-password",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"admin\",\n  \"newPassword\": \"newpass123\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sinh viên",
+      "item": [
+        { "name": "List", "request": { "method": "GET", "url": "{{baseUrl}}/sinh-vien" } },
+        { "name": "Get by ID", "request": { "method": "GET", "url": "{{baseUrl}}/sinh-vien/S001" } },
+        {
+          "name": "Create",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/sinh-vien",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"MaSV\": \"SV099\",\n  \"TenSV\": \"Test Mới\",\n  \"GioiTinh\": \"Nam\",\n  \"TenLop\": \"CNTT99\",\n  \"Email\": \"test99@example.com\",\n  \"MaNganh\": \"NG_CNTT\",\n  \"MaDoiTuong\": \"DT_KHONG\"\n}"
+            }
+          }
+        },
+        { "name": "Delete", "request": { "method": "DELETE", "url": "{{baseUrl}}/sinh-vien/SV099" } }
+      ]
+    },
+    {
+      "name": "Môn học",
+      "item": [
+        { "name": "List", "request": { "method": "GET", "url": "{{baseUrl}}/mon-hoc" } },
+        {
+          "name": "Create",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/mon-hoc",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"MaMH\": \"NEW101\",\n  \"TenMH\": \"Môn mới\",\n  \"MaLoaiMon\": \"LT\",\n  \"SoTiet\": 45,\n  \"SoTinChi\": 3,\n  \"HocPhi\": 1500000,\n  \"HocKy\": \"HK1\",\n  \"TenKhoa\": \"CNTT\",\n  \"SiSoToiDa\": 50\n}"
+            }
+          }
+        },
+        { "name": "Get pricing", "request": { "method": "GET", "url": "{{baseUrl}}/cau-hinh/gia" } },
+        {
+          "name": "Update pricing",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/cau-hinh/gia",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"donGiaTinChi\": 500000,\n  \"heSoLT\": 1.0,\n  \"heSoTH\": 1.5,\n  \"tiLeMienGiamTopDau\": 0.5,\n  \"tiLeMienGiamVungSauVungXa\": 0.3\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Đăng ký",
+      "item": [
+        {
+          "name": "Get môn mở cho SV",
+          "request": { "method": "GET", "url": "{{baseUrl}}/dang-ky/S001/mon-mo?ma_hk=HK_2024_2025_1" }
+        },
+        {
+          "name": "Đăng ký môn",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/dang-ky",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maSV\": \"S001\",\n  \"maHK\": \"HK_2024_2025_1\",\n  \"maMH\": \"TOAN101\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Huỷ đăng ký",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/dang-ky",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maSV\": \"S001\",\n  \"maHK\": \"HK_2024_2025_1\",\n  \"maMH\": \"TOAN101\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Học phí",
+      "item": [
+        { "name": "List", "request": { "method": "GET", "url": "{{baseUrl}}/hoc-phi" } },
+        {
+          "name": "Lịch sử thu",
+          "request": { "method": "GET", "url": "{{baseUrl}}/hoc-phi/S001/lich-su?ma_hk=HK_2024_2025_1" }
+        },
+        {
+          "name": "Thu tiền",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/hoc-phi/thu",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maSV\": \"SV002\",\n  \"maHK\": \"HK_2024_2025_1\",\n  \"soTien\": 500000,\n  \"ghiChu\": \"Đóng đợt 2\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard & Báo cáo",
+      "item": [
+        { "name": "Dashboard stats", "request": { "method": "GET", "url": "{{baseUrl}}/dashboard/stats" } },
+        { "name": "Revenue by semester", "request": { "method": "GET", "url": "{{baseUrl}}/dashboard/revenue-by-semester" } },
+        { "name": "Overdue debts", "request": { "method": "GET", "url": "{{baseUrl}}/dashboard/overdue-debts" } },
+        { "name": "Trạng thái HP", "request": { "method": "GET", "url": "{{baseUrl}}/bao-cao/trang-thai-hoc-phi" } },
+        { "name": "Đăng ký môn", "request": { "method": "GET", "url": "{{baseUrl}}/bao-cao/dang-ky-mon" } },
+        { "name": "Doanh thu trend", "request": { "method": "GET", "url": "{{baseUrl}}/bao-cao/doanh-thu-trend" } }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        { "name": "List accounts", "request": { "method": "GET", "url": "{{baseUrl}}/admin/tai-khoan" } },
+        {
+          "name": "Create account",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/admin/tai-khoan",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"Username\": \"giangvien01\",\n  \"Password\": \"abc123\",\n  \"HoTen\": \"Giảng viên A\",\n  \"Email\": \"gv01@uit.edu.vn\",\n  \"VaiTro\": \"GIANG_VIEN\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Master Data",
+      "item": [
+        { "name": "Học kỳ list", "request": { "method": "GET", "url": "{{baseUrl}}/hoc-ky" } },
+        { "name": "Học kỳ hiện tại", "request": { "method": "GET", "url": "{{baseUrl}}/hoc-ky/current" } },
+        { "name": "Quê quán", "request": { "method": "GET", "url": "{{baseUrl}}/que-quan" } },
+        { "name": "Đối tượng UT", "request": { "method": "GET", "url": "{{baseUrl}}/doi-tuong-uu-tien" } },
+        { "name": "Ngành học", "request": { "method": "GET", "url": "{{baseUrl}}/nganh-hoc" } }
+      ]
+    }
+  ]
+}

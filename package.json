@@ -1,0 +1,29 @@
+{
+  "name": "eduflow",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Hệ thống Quản lý đăng ký môn học và thu học phí — đồ án SE104 (UIT)",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "install:all": "npm install && npm install --workspaces",
+    "dev": "concurrently --kill-others-on-fail --names \"BE,FE\" --prefix-colors \"cyan,magenta\" \"npm:dev:backend\" \"npm:dev:frontend\"",
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "dev:backend": "npm run dev --workspace=backend",
+    "build": "npm run build --workspace=frontend",
+    "start": "npm run start --workspace=backend",
+    "db:migrate": "npm run db:migrate --workspace=backend",
+    "db:seed": "npm run db:seed --workspace=backend",
+    "db:reset": "npm run db:reset --workspace=backend",
+    "db:studio": "npm run db:studio --workspace=backend",
+    "setup": "npm run install:all && cd backend && cp -n .env.example .env || true && cd ../frontend && cp -n .env.example .env || true"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

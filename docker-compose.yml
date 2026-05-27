@@ -1,0 +1,35 @@
+# =============================================================================
+#  Docker Compose — chỉ MySQL (FE và BE chạy native bằng `npm run dev`)
+#
+#  Dùng khi bạn không muốn cài MySQL local. Chạy:
+#    docker compose up -d
+#  → MySQL chạy ở localhost:3306, user: root, password: eduflow_dev
+#  → Sửa backend/.env:
+#    DATABASE_URL="mysql://root:eduflow_dev@localhost:3306/eduflow"
+#
+#  Tắt: docker compose down
+#  Xoá data: docker compose down -v
+# =============================================================================
+
+services:
+  mysql:
+    image: mysql:8
+    container_name: eduflow-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: eduflow_dev
+      MYSQL_DATABASE: eduflow
+      MYSQL_CHARACTER_SET_SERVER: utf8mb4
+      MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
+    ports:
+      - "3306:3306"
+    volumes:
+      - eduflow-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-peduflow_dev"]
+      interval: 5s
+      retries: 10
+      start_period: 30s
+
+volumes:
+  eduflow-mysql-data:
