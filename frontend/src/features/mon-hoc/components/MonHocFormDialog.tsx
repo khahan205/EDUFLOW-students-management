@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
@@ -62,6 +62,16 @@ export function MonHocFormDialog({ open, onOpenChange, editing }: Props) {
     if (open) form.reset(editing ? (editing as MonHocInput) : EMPTY);
   }, [open, editing, form]);
 
+  // QĐ2: Tự tính SoTinChi = SoTiet÷15 (LT) hoặc SoTiet÷30 (TH)
+  const calcTinChi = useCallback(() => {
+    const soTiet = form.getValues('SoTiet');
+    const loai   = form.getValues('MaLoaiMon');
+    if (soTiet && soTiet > 0) {
+      const tc = Math.max(1, Math.round(soTiet / (loai === 'TH' ? 30 : 15)));
+      form.setValue('SoTinChi', tc, { shouldValidate: true });
+    }
+  }, [form]);
+
   const mutation = useMutation({
     mutationFn: (input: MonHocInput) =>
       isEdit ? updateMonHoc(editing!.MaMH, input) : createMonHoc(input),
@@ -115,7 +125,7 @@ export function MonHocFormDialog({ open, onOpenChange, editing }: Props) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Loại môn</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={(v) => { field.onChange(v); calcTinChi(); }} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue />
@@ -159,7 +169,12 @@ export function MonHocFormDialog({ open, onOpenChange, editing }: Props) {
                   <FormItem>
                     <FormLabel>Số tiết</FormLabel>
                     <FormControl>
-                      <Input type="number" min={1} {...field} />
+                      <Input
+                        type="number"
+                        min={1}
+                        {...field}
+                        onChange={(e) => { field.onChange(e); setTimeout(calcTinChi, 0); }}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -170,7 +185,10 @@ export function MonHocFormDialog({ open, onOpenChange, editing }: Props) {
                 name="SoTinChi"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Số tín chỉ</FormLabel>
+                    <FormLabel>
+                      Số tín chỉ
+                      <span className="ml-1 text-xs font-normal text-slate-400">(tự tính: Tiết÷15 LT, Tiết÷30 TH)</span>
+                    </FormLabel>
                     <FormControl>
                       <Input type="number" min={1} {...field} />
                     </FormControl>

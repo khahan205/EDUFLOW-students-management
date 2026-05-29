@@ -12,6 +12,7 @@ import { AccountTable } from '../components/AccountTable';
 import { AccountFormDialog } from '../components/AccountFormDialog';
 import { ResetPasswordDialog } from '../components/ResetPasswordDialog';
 import { AuditLogTab } from '../components/AuditLogTab';
+import { ThamSoTab } from '../components/ThamSoTab';
 
 export function AdminPage() {
   const qc = useQueryClient();
@@ -83,6 +84,7 @@ export function AdminPage() {
         <TabsList className="mb-4">
           <TabsTrigger value="accounts">Tài khoản</TabsTrigger>
           <TabsTrigger value="audit">Lịch sử hoạt động</TabsTrigger>
+          <TabsTrigger value="thamso">Tham số hệ thống</TabsTrigger>
         </TabsList>
 
         <TabsContent value="accounts">
@@ -101,6 +103,10 @@ export function AdminPage() {
 
         <TabsContent value="audit">
           <AuditLogTab />
+        </TabsContent>
+
+        <TabsContent value="thamso">
+          <ThamSoTab />
         </TabsContent>
       </Tabs>
 

@@ -27,6 +27,7 @@ export const ROUTES = {
   GIANG_VIEN: '/giang-vien',
   GIANG_VIEN_PROFILE: '/giang-vien/profile',
   GIANG_VIEN_LIST: '/danh-sach-giang-vien',
+  CHUONG_TRINH_HOC: '/chuong-trinh-hoc',
   PHAN_CONG: '/phan-cong',
 } as const;
 

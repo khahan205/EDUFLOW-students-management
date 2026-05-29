@@ -133,6 +133,68 @@ export async function getOverdueDebts() {
 }
 
 /**
+ * BM13.2 — Danh sách sinh viên chưa hoàn thành đóng học phí.
+ * Có thể lọc theo maHK. Trả về: MaSV, TenSV, MaHK, TenHK, SoTienDangKy, SoTienPhaiDong, DaDong, ConLai
+ */
+export async function getSinhVienNoHocPhi(maHK) {
+  const wherePhieu = maHK ? { MaHK: maHK } : {};
+
+  const phpAgg = await prisma.phieuHocPhi.groupBy({
+    by: ['MaSV', 'MaHK'],
+    where: wherePhieu,
+    _sum: { SoTienDangKy: true, SoTienPhaiDong: true },
+  });
+
+  if (phpAgg.length === 0) return [];
+
+  const ptAgg = await prisma.phieuThu.groupBy({
+    by: ['MaSV', 'MaHK'],
+    where: { OR: phpAgg.map((r) => ({ MaSV: r.MaSV, MaHK: r.MaHK })) },
+    _sum: { SoTienThu: true },
+  });
+  const thuMap = Object.fromEntries(
+    ptAgg.map((r) => [`${r.MaSV}|${r.MaHK}`, Number(r._sum.SoTienThu) || 0]),
+  );
+
+  const noRows = phpAgg.filter((r) => {
+    const phaiDong = Number(r._sum.SoTienPhaiDong) || 0;
+    return (thuMap[`${r.MaSV}|${r.MaHK}`] || 0) < phaiDong;
+  });
+
+  if (noRows.length === 0) return [];
+
+  const [svs, hks] = await Promise.all([
+    prisma.sinhVien.findMany({
+      where: { MaSV: { in: [...new Set(noRows.map((r) => r.MaSV))] } },
+      select: { MaSV: true, TenSV: true },
+    }),
+    prisma.hocKy.findMany({
+      where: { MaHK: { in: [...new Set(noRows.map((r) => r.MaHK))] } },
+      select: { MaHK: true, TenHK: true, NamHoc: true },
+    }),
+  ]);
+  const svMap = Object.fromEntries(svs.map((s) => [s.MaSV, s.TenSV]));
+  const hkMap = Object.fromEntries(hks.map((h) => [h.MaHK, { TenHK: h.TenHK, NamHoc: h.NamHoc }]));
+
+  return noRows.map((r) => {
+    const phaiDong = Number(r._sum.SoTienPhaiDong) || 0;
+    const dangKy  = Number(r._sum.SoTienDangKy) || 0;
+    const daDong  = thuMap[`${r.MaSV}|${r.MaHK}`] || 0;
+    return {
+      MaSV: r.MaSV,
+      TenSV: svMap[r.MaSV] ?? r.MaSV,
+      MaHK: r.MaHK,
+      TenHK: hkMap[r.MaHK]?.TenHK ?? r.MaHK,
+      NamHoc: hkMap[r.MaHK]?.NamHoc ?? '',
+      SoTienDangKy: dangKy,
+      SoTienPhaiDong: phaiDong,
+      DaDong: daDong,
+      ConLai: phaiDong - daDong,
+    };
+  });
+}
+
+/**
  * Báo cáo: trạng thái học phí (count + amount theo trạng thái).
  */
 export async function getPaymentStatusBreakdown() {

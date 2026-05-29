@@ -158,3 +158,55 @@ export async function pay({ maSV, maHK, soTien, ghiChu }) {
     };
   });
 }
+
+/**
+ * BM11 — Tra cứu phiếu đăng ký học phần.
+ */
+export async function searchPhieuDangKy({ maPhieu, maSV, maHK }) {
+  const rows = await prisma.phieuHocPhi.findMany({
+    where: {
+      ...(maPhieu ? { MaPhieu: { contains: maPhieu } } : {}),
+      ...(maSV    ? { MaSV: { contains: maSV }       } : {}),
+      ...(maHK    ? { MaHK: maHK }                     : {}),
+    },
+    include: {
+      sinhVien: { select: { TenSV: true } },
+      monHoc:   { select: { TenMH: true, SoTinChi: true, MaLoaiMon: true } },
+      hocKy:    { select: { TenHK: true, NamHoc: true } },
+    },
+    orderBy: { NgayLap: 'desc' },
+    take: 200,
+  });
+  return rows.map((r) => ({
+    MaPhieu: r.MaPhieu, MaSV: r.MaSV, TenSV: r.sinhVien.TenSV,
+    MaMH: r.MaMH, TenMH: r.monHoc.TenMH, SoTinChi: r.monHoc.SoTinChi,
+    MaLoaiMon: r.monHoc.MaLoaiMon, MaHK: r.MaHK,
+    TenHK: r.hocKy.TenHK, NamHoc: r.hocKy.NamHoc,
+    NgayLap: r.NgayLap.toISOString(),
+    SoTienDangKy: Number(r.SoTienDangKy), SoTienPhaiDong: Number(r.SoTienPhaiDong),
+  }));
+}
+
+/**
+ * BM12 — Tra cứu phiếu thu học phí.
+ */
+export async function searchPhieuThu({ maPhieuThu, maSV, maHK }) {
+  const rows = await prisma.phieuThu.findMany({
+    where: {
+      ...(maPhieuThu ? { MaPhieuThu: { contains: maPhieuThu } } : {}),
+      ...(maSV       ? { MaSV: { contains: maSV }              } : {}),
+      ...(maHK       ? { MaHK: maHK }                            : {}),
+    },
+    include: {
+      sinhVien: { select: { TenSV: true } },
+      hocKy:    { select: { TenHK: true, NamHoc: true } },
+    },
+    orderBy: { NgayThu: 'desc' },
+    take: 200,
+  });
+  return rows.map((r) => ({
+    MaPhieuThu: r.MaPhieuThu, MaSV: r.MaSV, TenSV: r.sinhVien.TenSV,
+    MaHK: r.MaHK, TenHK: r.hocKy.TenHK, NamHoc: r.hocKy.NamHoc,
+    NgayThu: r.NgayThu.toISOString(), SoTienThu: Number(r.SoTienThu), GhiChu: r.GhiChu ?? '',
+  }));
+}

@@ -16,3 +16,13 @@ export const payCtrl = asyncHandler(async (req, res) => {
   const input = validate(paySchema, req.body);
   res.status(201).json(await svc.pay(input));
 });
+
+export const searchPhieuDangKyCtrl = asyncHandler(async (req, res) => {
+  const { maPhieu, maSV, maHK } = req.query;
+  res.json(await svc.searchPhieuDangKy({ maPhieu, maSV, maHK }));
+});
+
+export const searchPhieuThuCtrl = asyncHandler(async (req, res) => {
+  const { maPhieuThu, maSV, maHK } = req.query;
+  res.json(await svc.searchPhieuThu({ maPhieuThu, maSV, maHK }));
+});

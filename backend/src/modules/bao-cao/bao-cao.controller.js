@@ -24,3 +24,7 @@ export const enrollmentStatsCtrl = asyncHandler(async (_req, res) => {
 export const revenueTrendCtrl = asyncHandler(async (_req, res) => {
   res.json(await svc.getRevenueTrend());
 });
+
+export const sinhVienNoCtrl = asyncHandler(async (req, res) => {
+  res.json(await svc.getSinhVienNoHocPhi(req.query.maHK));
+});

@@ -81,4 +81,29 @@ router.put(
   }),
 );
 
+// ------------- THAM SỐ HỆ THỐNG (BM15) -------------
+router.get(
+  '/tham-so',
+  asyncHandler(async (_req, res) => {
+    res.json(await prisma.thamSo.findMany({ orderBy: { TenThamSo: 'asc' } }));
+  }),
+);
+
+router.put(
+  '/tham-so/:ten',
+  requireRole('ADMIN'),
+  asyncHandler(async (req, res) => {
+    const { ten } = req.params;
+    const { giaTri } = req.body;
+    if (giaTri === undefined) {
+      return res.status(400).json({ message: 'Thiếu giá trị tham số.' });
+    }
+    const updated = await prisma.thamSo.update({
+      where: { TenThamSo: ten },
+      data: { GiaTri: String(giaTri) },
+    });
+    res.json(updated);
+  }),
+);
+
 export default router;

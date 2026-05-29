@@ -13,6 +13,7 @@ import {
   IconChevronDown,
   IconCalendarEvent,
   IconChalkboard,
+  IconListCheck,
   IconUser,
   type Icon,
 } from '@tabler/icons-react';
@@ -46,6 +47,7 @@ const NAV: NavItem[] = [
   { to: ROUTES.GIANG_VIEN_LIST, label: 'Giảng viên', Icon: IconUser, roles: ['admin', 'phong-dao-tao'] },
   { to: ROUTES.MON_HOC, label: 'Môn học', Icon: IconBook2, roles: ['admin', 'phong-dao-tao'] },
   { to: ROUTES.MON_HOC_MO, label: 'Học phần', Icon: IconCalendarEvent, roles: ['admin', 'phong-dao-tao'] },
+  { to: ROUTES.CHUONG_TRINH_HOC, label: 'Chương trình', Icon: IconListCheck, roles: ['admin', 'phong-dao-tao'] },
   { to: ROUTES.HOC_PHI, label: 'Học phí', Icon: IconCashBanknote, roles: ['admin', 'phong-tai-chinh'] },
   { to: ROUTES.BAO_CAO, label: 'Báo cáo', Icon: IconChartBar, roles: ['admin', 'phong-dao-tao', 'phong-tai-chinh'] },
   { to: ROUTES.ADMIN, label: 'Admin', Icon: IconSettings, roles: ['admin'] },

@@ -21,6 +21,7 @@ import masterDataRouter from './modules/master-data/master-data.routes.js';
 import monHocMoRouter from './modules/mon-hoc-mo/mon-hoc-mo.routes.js';
 import phanCongRouter from './modules/phan-cong/phan-cong.routes.js';
 import giangVienRouter from './modules/giang-vien/giang-vien.routes.js';
+import chuongTrinhHocRouter from './modules/chuong-trinh-hoc/chuong-trinh-hoc.routes.js';
 
 const app = express();
 
@@ -76,6 +77,7 @@ app.use('/api/admin', adminRouter);
 app.use('/api/mon-hoc-mo', monHocMoRouter);
 app.use('/api/phan-cong', phanCongRouter);
 app.use('/api/giang-vien', giangVienRouter);
+app.use('/api/chuong-trinh-hoc', chuongTrinhHocRouter);
 app.use('/api', masterDataRouter); // /api/hoc-ky, /api/que-quan, /api/cau-hinh/gia, ...
 
 // ---------- 404 + Error handler (PHẢI ĐẶT CUỐI) ----------
