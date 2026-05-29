@@ -31,18 +31,49 @@ enum TrangThaiTK {
 }
 
 model TaiKhoan {
-  MaTK         Int         @id @default(autoincrement())
-  Username     String      @unique @db.VarChar(50)
-  PasswordHash String      @db.VarChar(255)
-  HoTen        String      @db.VarChar(100)
-  Email        String?     @db.VarChar(100)
-  VaiTro       VaiTro
-  TrangThai    TrangThaiTK @default(ACTIVE)
-  NgayTao      DateTime    @default(now())
-  NgayCapNhat  DateTime    @updatedAt
-  LastLoginAt  DateTime?
+  MaTK               Int         @id @default(autoincrement())
+  Username           String      @unique @db.VarChar(50)
+  PasswordHash       String      @db.VarChar(255)
+  HoTen              String      @db.VarChar(100)
+  Email              String?     @db.VarChar(100)
+  VaiTro             VaiTro
+  TrangThai          TrangThaiTK @default(ACTIVE)
+  MustChangePassword Boolean     @default(false)
+  NgayTao            DateTime    @default(now())
+  NgayCapNhat        DateTime    @updatedAt
+  LastLoginAt        DateTime?
+
+  refreshTokens        RefreshToken[]
+  passwordResetTokens  PasswordResetToken[]
+  phanCongs            PhanCongGiangDay[]
+  giangVienProfile     GiangVienProfile?
 
   @@map("TAIKHOAN")
+}
+
+model RefreshToken {
+  Id         Int      @id @default(autoincrement())
+  MaTK       Int
+  taiKhoan   TaiKhoan @relation(fields: [MaTK], references: [MaTK], onDelete: Cascade)
+  Token      String   @unique @db.VarChar(512)
+  ExpiresAt  DateTime
+  CreatedAt  DateTime @default(now())
+
+  @@index([MaTK])
+  @@map("REFRESHTOKEN")
+}
+
+model PasswordResetToken {
+  Id        Int       @id @default(autoincrement())
+  MaTK      Int
+  taiKhoan  TaiKhoan  @relation(fields: [MaTK], references: [MaTK], onDelete: Cascade)
+  Token     String    @unique @db.VarChar(512)
+  ExpiresAt DateTime
+  UsedAt    DateTime?
+  CreatedAt DateTime  @default(now())
+
+  @@index([MaTK])
+  @@map("PASSWORDRESETTOKEN")
 }
 
 // =============================================================================
@@ -195,13 +226,45 @@ model ChuongTrinhHoc {
 }
 
 model MonHocMo {
-  MaHK    String  @db.VarChar(30)
-  hocKy   HocKy   @relation(fields: [MaHK], references: [MaHK])
-  MaMH    String  @db.VarChar(20)
-  monHoc  MonHoc  @relation(fields: [MaMH], references: [MaMH])
+  MaHK      String  @db.VarChar(30)
+  hocKy     HocKy   @relation(fields: [MaHK], references: [MaHK])
+  MaMH      String  @db.VarChar(20)
+  monHoc    MonHoc  @relation(fields: [MaMH], references: [MaMH])
+  SiSoToiDa Int?    // null = dùng SiSoToiDa từ MonHoc
+
+  phanCong  PhanCongGiangDay?
 
   @@id([MaHK, MaMH])
   @@map("MONHOCMO")
+}
+
+model PhanCongGiangDay {
+  MaHK         String    @db.VarChar(30)
+  MaMH         String    @db.VarChar(20)
+  monHocMo     MonHocMo  @relation(fields: [MaHK, MaMH], references: [MaHK, MaMH], onDelete: Cascade)
+  MaTK         Int
+  taiKhoan     TaiKhoan  @relation(fields: [MaTK], references: [MaTK], onDelete: Cascade)
+  NgayPhanCong DateTime  @default(now())
+
+  @@id([MaHK, MaMH])
+  @@index([MaTK])
+  @@map("PHANCONGGIANGDAY")
+}
+
+model GiangVienProfile {
+  MaTK        Int       @id
+  taiKhoan    TaiKhoan  @relation(fields: [MaTK], references: [MaTK], onDelete: Cascade)
+  NgaySinh    DateTime? @db.Date
+  Khoa        String?   @db.VarChar(100)
+  BoMon       String?   @db.VarChar(100)
+  HocVi       String?   @db.VarChar(50)
+  HocHam      String?   @db.VarChar(50)
+  NamCongTac  Int?
+  QuaTrinhCT  String?   @db.Text
+  AnhDaiDien  String?   @db.LongText  // base64 data URL
+  NgayCapNhat DateTime  @updatedAt
+
+  @@map("GIANGVIENPROFILE")
 }
 
 // =============================================================================
@@ -223,6 +286,7 @@ model PhieuHocPhi {
   NgayLap         DateTime  @default(now())
   SoTienDangKy    Decimal   @db.Decimal(12, 0)
   SoTienPhaiDong  Decimal   @db.Decimal(12, 0)
+  HanDong         DateTime? @db.Date
 
   @@unique([MaSV, MaMH, MaHK])
   @@index([MaSV])
@@ -263,4 +327,35 @@ model ThamSo {
   NgayCapNhat DateTime @updatedAt
 
   @@map("THAMSO")
+}
+
+// =============================================================================
+//  AUDIT LOG
+// =============================================================================
+
+model AuditLog {
+  Id         Int      @id @default(autoincrement())
+  MaTK       Int?
+  HanhDong   String   @db.VarChar(50)   // CREATE | UPDATE | DELETE | LOGIN | LOGOUT
+  DoiTuong   String   @db.VarChar(50)   // tên model/resource
+  DoiTuongId String?  @db.VarChar(50)
+  MoTa       String?  @db.Text
+  IpAddress  String?  @db.VarChar(45)
+  ThoiGian   DateTime @default(now())
+
+  @@index([MaTK])
+  @@index([ThoiGian])
+  @@map("AUDITLOG")
+}
+
+// =============================================================================
+//  ĐIỀU KIỆN TIÊN QUYẾT
+// =============================================================================
+
+model MonHocYeuCau {
+  MaMH       String @db.VarChar(20)
+  MaMHYeuCau String @db.VarChar(20)
+
+  @@id([MaMH, MaMHYeuCau])
+  @@map("MONHOCYEUCAU")
 }

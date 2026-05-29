@@ -7,6 +7,7 @@ import {
   updateAccountCtrl,
   resetPasswordCtrl,
   deleteAccountCtrl,
+  listAuditLogCtrl,
 } from './admin.controller.js';
 
 const router = Router();
@@ -18,5 +19,6 @@ router.post('/tai-khoan', createAccountCtrl);
 router.put('/tai-khoan/:id', updateAccountCtrl);
 router.post('/tai-khoan/:id/reset-password', resetPasswordCtrl);
 router.delete('/tai-khoan/:id', deleteAccountCtrl);
+router.get('/audit-log', listAuditLogCtrl);
 
 export default router;

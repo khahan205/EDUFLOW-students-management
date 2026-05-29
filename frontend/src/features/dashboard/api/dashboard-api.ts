@@ -2,12 +2,8 @@ import { delay } from '@/lib/delay';
 import { USE_MOCK } from '@/lib/constants';
 import { apiClient } from '@/services/api-client';
 import type { DashboardStats, RevenueBySemesterRow } from '@/types';
-import {
-  mockDashboardStats,
-  mockRevenueBySemester,
-  mockOverdueDebts,
-  type OverdueDebt,
-} from '../mocks/dashboard-mocks';
+import { mockDashboardStats, mockRevenueBySemester } from '../mocks/dashboard-mocks';
+import type { OverdueDebtRow } from '../components/OverdueDebts';
 
 export async function fetchDashboardStats(): Promise<DashboardStats> {
   if (USE_MOCK) {
@@ -27,11 +23,11 @@ export async function fetchRevenueBySemester(): Promise<RevenueBySemesterRow[]> 
   return data;
 }
 
-export async function fetchOverdueDebts(): Promise<OverdueDebt[]> {
+export async function fetchOverdueDebts(): Promise<OverdueDebtRow[]> {
   if (USE_MOCK) {
     await delay();
-    return mockOverdueDebts;
+    return [];
   }
-  const { data } = await apiClient.get<OverdueDebt[]>('/dashboard/overdue-debts');
+  const { data } = await apiClient.get<OverdueDebtRow[]>('/dashboard/overdue-debts');
   return data;
 }

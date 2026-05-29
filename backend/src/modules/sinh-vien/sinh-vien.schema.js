@@ -10,7 +10,9 @@ export const sinhVienCreateSchema = z.object({
   MaQueQuan: z.string().max(20).optional().nullable(),
   MaDoiTuong: z.string().max(20).optional().nullable(),
   MaNganh: z.string().max(20).optional().nullable(),
-  TrangThai: z.enum(['DANG_HOC', 'BAO_LUU', 'TOT_NGHIEP']).default('DANG_HOC'),
+  TrangThai: z
+    .enum(['Đang học', 'Bảo lưu', 'Tốt nghiệp', 'DANG_HOC', 'BAO_LUU', 'TOT_NGHIEP'])
+    .default('Đang học'),
 });
 
 export const sinhVienUpdateSchema = sinhVienCreateSchema.omit({ MaSV: true }).partial();

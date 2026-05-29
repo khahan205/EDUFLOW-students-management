@@ -6,6 +6,24 @@ import {
   resetPasswordSchema,
 } from './admin.schema.js';
 import * as svc from './admin.service.js';
+import { prisma } from '../../config/prisma.js';
+
+export const listAuditLogCtrl = asyncHandler(async (_req, res) => {
+  const logs = await prisma.auditLog.findMany({
+    orderBy: { ThoiGian: 'desc' },
+    take: 500,
+  });
+  // Attach usernames
+  const maTKSet = [...new Set(logs.map((l) => l.MaTK).filter(Boolean))];
+  const accounts = maTKSet.length
+    ? await prisma.taiKhoan.findMany({
+        where: { MaTK: { in: maTKSet } },
+        select: { MaTK: true, Username: true },
+      })
+    : [];
+  const usernameMap = Object.fromEntries(accounts.map((a) => [a.MaTK, a.Username]));
+  res.json(logs.map((l) => ({ ...l, username: l.MaTK ? (usernameMap[l.MaTK] ?? null) : null })));
+});
 
 export const listAccountsCtrl = asyncHandler(async (_req, res) => {
   res.json(await svc.listAccounts());

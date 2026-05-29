@@ -1,187 +1,215 @@
-# EduFlow
+# EduFlow — Hệ thống Quản lý Sinh viên
 
-> Hệ thống Quản lý đăng ký môn học và thu học phí — đồ án **SE104** (UIT)
+> Đồ án **SE104** · Trường Đại học Công nghệ Thông tin (UIT)
 
-Monorepo gồm 2 package: **frontend** (React + Vite) và **backend** (Express + Prisma + MySQL).
-Chỉ cần 1 lệnh để chạy cả hai cùng lúc.
+Hệ thống quản lý đăng ký môn học và thu học phí dành cho cán bộ nhà trường. Monorepo gồm **Frontend** (React + Vite) và **Backend** (Express + Prisma + MySQL).
 
 ---
 
-## 🚀 Khởi chạy lần đầu
+## Yêu cầu hệ thống
 
-### Yêu cầu
-- **Node.js 20+** ([download](https://nodejs.org/))
-- **MySQL 8** đang chạy (XAMPP, Docker, hoặc MySQL Server)
+| Công cụ | Phiên bản |
+|---------|-----------|
+| Node.js | 20+ |
+| MySQL | 8+ |
+| npm | 10+ |
 
-### Setup nhanh (3 bước)
+---
+
+## Cài đặt và chạy
+
+### 1. Clone và cài dependencies
 
 ```bash
-# 1. Cài tất cả dependencies (root + frontend + backend)
+git clone https://github.com/your-username/eduflow.git
+cd eduflow
 npm run install:all
+```
 
-# 2. Copy file môi trường cho cả 2 project + tạo DB schema + seed dữ liệu mẫu
+### 2. Cấu hình môi trường
+
+```bash
 cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env
-# → Mở backend/.env và sửa DATABASE_URL theo MySQL local của bạn
+```
 
-npm run db:migrate   # Tạo bảng trong DB
-npm run db:seed      # Tạo tài khoản admin/admin + dữ liệu mẫu
+Mở `backend/.env` và cập nhật `DATABASE_URL`:
 
-# 3. Chạy cả frontend và backend cùng lúc
+```env
+DATABASE_URL="mysql://root:YOUR_PASSWORD@localhost:3306/eduflow"
+JWT_SECRET="your-secret-key"
+```
+
+### 3. Khởi tạo cơ sở dữ liệu
+
+```bash
+# Tạo database (nếu chưa có)
+mysql -u root -p -e "CREATE DATABASE eduflow CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+
+# Chạy migration và seed dữ liệu mẫu
+npm run db:migrate
+npm run db:seed
+```
+
+### 4. Chạy ứng dụng
+
+```bash
+# Chạy cả Frontend và Backend cùng lúc
 npm run dev
 ```
 
-**Kết quả**:
-- Backend → http://localhost:8000 (REST API)
-- Frontend → http://localhost:5173 (UI)
-- Mở **http://localhost:5173** để dùng app
-
-### Tài khoản mặc định
-
-| Username | Password | Vai trò |
-|----------|----------|---------|
-| `admin` | `admin` | Quản trị viên |
-| `pdt` | `pdt` | Phòng đào tạo |
-| `ketoan` | `ketoan` | Phòng tài chính |
+| Service | URL |
+|---------|-----|
+| Frontend | http://localhost:5173 |
+| Backend API | http://localhost:8000 |
+| API Health | http://localhost:8000/api/health |
 
 ---
 
-## 📁 Cấu trúc monorepo
+## Tài khoản mặc định
+
+Mật khẩu tất cả tài khoản: **`363636`**
+
+| Tài khoản | Email | Vai trò |
+|-----------|-------|---------|
+| `admin` | admin@gmail.com | Quản trị viên |
+| `pdt` | pdt@gmail.com | Phòng Đào tạo |
+| `ketoan` | ketoan@gmail.com | Phòng Tài chính |
+| `gv_mai` | mai.nt@gmail.com | Giảng viên |
+| `gv_hung` | hung.tv@gmail.com | Giảng viên |
+| `gv_thu` | thu.lt@gmail.com | Giảng viên |
+| `gv_duc` | duc.pv@gmail.com | Giảng viên |
+
+---
+
+## Cấu trúc dự án
 
 ```
 eduflow/
-├── package.json              ← Root workspace
-├── README.md                 ← File này
-├── .gitignore
-├── frontend/                 ← React + TypeScript + Tailwind + shadcn/ui
-│   ├── package.json
-│   ├── README.md             ← Chi tiết frontend
+├── frontend/                   # React + TypeScript + Tailwind + shadcn/ui
 │   └── src/
-└── backend/                  ← Express + Prisma + MySQL + JWT
-    ├── package.json
-    ├── README.md             ← Chi tiết backend
-    ├── prisma/
-    │   ├── schema.prisma     ← 14 bảng (13 từ chương 4 + TaiKhoan)
-    │   └── seed.js
-    └── src/
+│       ├── components/         # UI components dùng chung
+│       ├── features/           # Các tính năng (admin, auth, hoc-phi, ...)
+│       ├── routes/             # React Router + bảo vệ route theo vai trò
+│       ├── services/           # API client (axios)
+│       ├── stores/             # Zustand state management
+│       └── types/              # TypeScript types
+│
+├── backend/                    # Express + Prisma + MySQL + JWT
+│   ├── prisma/
+│   │   ├── schema.prisma       # Schema CSDL
+│   │   ├── migrations/         # Lịch sử migration
+│   │   └── seed.js             # Dữ liệu mẫu
+│   └── src/
+│       ├── config/             # Cấu hình môi trường, Prisma
+│       ├── middlewares/        # Auth, RBAC, error handling
+│       ├── modules/            # Các module (auth, sinh-vien, hoc-phi, ...)
+│       └── utils/              # Helpers, JWT, hash
+│
+├── docker-compose.yml          # Docker: MySQL + Backend + Frontend
+└── package.json                # Root workspace scripts
 ```
-
-Mỗi package có README riêng giải thích chi tiết cấu trúc folder và API.
 
 ---
 
-## 📜 Scripts ở root
+## Scripts
 
 ```bash
-# === DEV ===
-npm run dev               # Chạy cả 2 (BE port 8000 + FE port 5173)
-npm run dev:backend       # Chỉ backend
-npm run dev:frontend      # Chỉ frontend
+# Phát triển
+npm run dev               # Chạy cả Frontend và Backend
+npm run dev:backend       # Chỉ Backend (port 8000)
+npm run dev:frontend      # Chỉ Frontend (port 5173)
 
-# === BUILD & PRODUCTION ===
-npm run build             # Build frontend ra static files
-npm start                 # Chạy backend production
-
-# === DATABASE ===
-npm run db:migrate        # Tạo migration mới (dev)
+# Cơ sở dữ liệu
+npm run db:migrate        # Chạy migration
 npm run db:seed           # Seed dữ liệu mẫu
-npm run db:reset          # ⚠️ Xoá DB và migrate lại từ đầu
-npm run db:studio         # Mở Prisma Studio (GUI cho DB)
+npm run db:reset          # Xoá và khởi tạo lại DB
+npm run db:studio         # Mở Prisma Studio (GUI)
 
-# === SETUP ===
-npm run install:all       # Cài deps cho root + frontend + backend
+# Production
+npm run build             # Build frontend
+npm start                 # Chạy backend production
 ```
 
 ---
 
-## 🏗️ Cách FE và BE giao tiếp
+## Phân quyền
 
-```
-Browser (localhost:5173)            Server (localhost:8000)
-  ┌─────────────────┐                  ┌─────────────────┐
-  │   Frontend      │  HTTP/JSON       │    Backend      │
-  │   React + Vite  │ ───────────────► │ Express + JWT   │
-  │                 │                  │                 │
-  │  - UI/UX        │ ◄─────────────── │  - REST API     │
-  │  - State        │     Bearer JWT   │  - Business     │
-  │  - Routing      │                  │    logic        │
-  └─────────────────┘                  └────────┬────────┘
-                                                │ Prisma
-                                                ▼
-                                       ┌─────────────────┐
-                                       │     MySQL       │
-                                       │   14 tables     │
-                                       └─────────────────┘
-```
-
-- Frontend gọi backend qua axios (xem `frontend/src/services/api-client.ts`)
-- Backend cấp JWT khi login (xem `backend/src/modules/auth/`)
-- Mọi request sau đó phải có header `Authorization: Bearer <token>`
-- Frontend lưu token trong localStorage và tự attach vào mỗi request
+| Vai trò | Quyền truy cập |
+|---------|----------------|
+| **Admin** | Toàn bộ hệ thống + quản lý tài khoản |
+| **Phòng Đào tạo** | Sinh viên, Môn học, Lớp học phần, Giảng viên, Báo cáo |
+| **Phòng Tài chính** | Thu học phí, Báo cáo tài chính |
+| **Giảng viên** | Hồ sơ cá nhân, Lớp được phân công |
 
 ---
 
-## 🐛 Troubleshooting
+## Deploy
 
-**`Error: connect ECONNREFUSED 127.0.0.1:3306`**
-→ MySQL chưa chạy. Mở XAMPP / Docker / Service và start MySQL.
+### Backend → Railway
 
-**`Error: Database 'eduflow' doesn't exist`**
-→ Tạo database trống trước rồi mới chạy migrate:
+1. Tạo project tại [railway.app](https://railway.app) → Deploy từ GitHub → chọn thư mục `backend`
+2. Add Plugin **MySQL**
+3. Thêm Environment Variables:
+
+```env
+NODE_ENV=production
+JWT_SECRET=your-strong-secret
+FRONTEND_URL=https://your-app.vercel.app
+```
+
+4. Chạy migration sau khi deploy: `npm run db:migrate && npm run db:seed`
+
+### Frontend → Vercel
+
+1. Import repo tại [vercel.com](https://vercel.com) → Root Directory: `frontend`
+2. Thêm Environment Variables:
+
+```env
+VITE_API_BASE_URL=https://your-backend.railway.app/api
+VITE_USE_MOCK=false
+VITE_USE_MOCK_AUTH=false
+VITE_AUTH_STORAGE_KEY=eduflow_auth
+```
+
+3. Deploy — Vercel tự build Vite.
+
+### Docker (Full Stack)
+
+```bash
+# Chỉ MySQL (phát triển local)
+docker compose up -d mysql
+
+# Toàn bộ stack
+docker compose --profile full up -d --build
+```
+
+---
+
+## Xử lý sự cố
+
+**`ECONNREFUSED 127.0.0.1:3306`** — MySQL chưa chạy. Khởi động XAMPP/Docker/Service.
+
+**`Database doesn't exist`** — Tạo database trước:
 ```bash
 mysql -u root -p -e "CREATE DATABASE eduflow CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-npm run db:migrate
 ```
 
-**`Port 8000 / 5173 đang được dùng`**
-→ Có process khác đang dùng. Tắt nó hoặc đổi port:
-- Backend: sửa `PORT` trong `backend/.env`
-- Frontend: sửa trong `frontend/vite.config.ts` (mục `server.port`)
+**Port đang bị dùng** — Tắt process cũ:
+```bash
+taskkill /F /IM node.exe   # Windows
+```
 
-**Frontend không kết nối được với backend**
-→ Kiểm tra `frontend/.env`:
-- `VITE_API_BASE_URL=http://localhost:8000/api` (đúng URL backend)
-- `VITE_USE_MOCK=false` (để gọi BE thật, không dùng mock)
-
-**Lỗi CORS**
-→ Kiểm tra `backend/.env`:
-- `FRONTEND_URL=http://localhost:5173` (đúng origin của FE)
+**Login báo sai tài khoản** — Đảm bảo đã chạy `npm run db:seed` và nhập đúng **username** (không phải email).
 
 ---
 
-## 🚢 Deploy
+## Công nghệ sử dụng
 
-Project có thể deploy theo nhiều cách. Phổ biến nhất:
+**Frontend:** React 18, TypeScript, Vite, Tailwind CSS, shadcn/ui, TanStack Query, Zustand, React Hook Form, Recharts
 
-### Cách 1 — Tách 2 services (recommend)
-- **Backend** → Render / Railway / DigitalOcean App / VPS (cần MySQL)
-- **Frontend** → Vercel / Netlify / Cloudflare Pages (chỉ static files)
-- Sửa `frontend/.env`: `VITE_API_BASE_URL=https://your-backend.com/api`
-
-### Cách 2 — Cùng 1 server (VPS)
-1. Build frontend: `npm run build`
-2. Copy `frontend/dist/` vào VPS
-3. Cấu hình Nginx: 
-   - `/api/*` → proxy về `http://localhost:8000`
-   - `/*` → serve static `frontend/dist/`
-4. Chạy backend với PM2: `pm2 start backend/src/server.js --name eduflow-api`
-
-### Cách 3 — Docker (advanced)
-- Cần thêm `docker-compose.yml` (chưa setup sẵn, có thể thêm sau)
-- 3 containers: mysql, backend, frontend (Nginx serve static)
+**Backend:** Node.js, Express, Prisma ORM, MySQL, JWT, bcrypt, Zod
 
 ---
 
-## 📚 Tài liệu chi tiết
-
-- **Frontend**: [`frontend/README.md`](./frontend/README.md) — chi tiết cấu trúc folder, design tokens, scripts
-- **Backend**: [`backend/README.md`](./backend/README.md) — chi tiết API endpoints, phân quyền, business logic
-- **Báo cáo Chương 4**: `Chuong4_ThietKeDuLieu.docx` — thiết kế CSDL 13 bảng
-
----
-
-## 👥 Đóng góp
-
-Project là đồ án SE104 — UIT.
-
-© 2025
+*Đồ án SE104 — UIT · 2025*

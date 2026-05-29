@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { IconSearch, IconUserCircle } from '@tabler/icons-react';
@@ -100,7 +100,7 @@ export function SinhVienSearchCard({ selectedSV, onSelect }: Props) {
             <div className="grid h-12 w-12 place-items-center rounded-full bg-teal-700 text-white">
               <IconUserCircle className="h-7 w-7" />
             </div>
-            <div className="flex-1 grid grid-cols-2 gap-x-6 gap-y-1 text-[13px] md:grid-cols-4">
+            <div className="flex-1 grid grid-cols-2 gap-x-6 gap-y-1 text-sm md:grid-cols-4">
               <div>
                 <div className="text-[10.5px] font-semibold uppercase tracking-wider text-slate-500">Mã SV</div>
                 <div className="font-mono font-semibold text-slate-900">{selectedSV.MaSV}</div>

@@ -20,6 +20,14 @@ export const ROUTES = {
   HOC_PHI: '/hoc-phi',
   BAO_CAO: '/bao-cao',
   ADMIN: '/admin',
+  CHANGE_PASSWORD: '/change-password',
+  FORGOT_PASSWORD: '/forgot-password',
+  RESET_PASSWORD: '/reset-password',
+  MON_HOC_MO: '/mon-hoc-mo',
+  GIANG_VIEN: '/giang-vien',
+  GIANG_VIEN_PROFILE: '/giang-vien/profile',
+  GIANG_VIEN_LIST: '/danh-sach-giang-vien',
+  PHAN_CONG: '/phan-cong',
 } as const;
 
 /** Simulated network latency for mock APIs (ms) */
@@ -27,3 +35,6 @@ export const MOCK_LATENCY_MS = 250;
 
 /** Whether to use mocks (defaults to true while backend is being built) */
 export const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false';
+
+/** Whether to use mock auth specifically (can be true even when USE_MOCK=false) */
+export const USE_MOCK_AUTH = import.meta.env.VITE_USE_MOCK_AUTH !== 'false';

@@ -1,4 +1,4 @@
-import { Card, CardHeader, CardTitle } from '@/components/ui/card';
+﻿import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { formatCurrencyVND } from '@/lib/format';
 import type { PaymentStatusBreakdown } from '@/types';
@@ -26,9 +26,9 @@ export function PaymentStatusChart({ data }: Props) {
           const pct = (d.count / totalCount) * 100;
           return (
             <div key={d.status} className="border-b border-slate-100 px-5 py-3.5 last:border-b-0">
-              <div className="mb-2 flex items-center justify-between text-[13px] font-medium">
+              <div className="mb-2 flex items-center justify-between text-sm font-medium">
                 <span className="text-slate-700">{d.status}</span>
-                <span className="font-mono text-[12px] text-slate-600">
+                <span className="font-mono text-xs text-slate-600">
                   {d.count} SV ({formatCurrencyVND(d.amount)})
                 </span>
               </div>

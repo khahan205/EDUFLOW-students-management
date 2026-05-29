@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { IconUser, IconLock, IconLogin2, IconAlertCircle } from '@tabler/icons-react';
+import { IconMail, IconLock, IconLogin2, IconAlertCircle } from '@tabler/icons-react';
+import { PasswordInput } from '@/components/ui/password-input';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,7 +38,11 @@ export function LoginForm() {
       const session = await login(values);
       setSession(session);
       toast.success(`Chào mừng ${session.user.fullName}!`);
-      navigate(ROUTES.DASHBOARD);
+      if (session.user.mustChangePassword) {
+        navigate(ROUTES.CHANGE_PASSWORD, { replace: true });
+      } else {
+        navigate(ROUTES.DASHBOARD);
+      }
     } catch (err) {
       const message =
         (err as { message?: string })?.message || 'Có lỗi xảy ra. Vui lòng thử lại.';
@@ -62,12 +67,13 @@ export function LoginForm() {
           name="username"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Tên đăng nhập</FormLabel>
+              <FormLabel>Email hoặc tên đăng nhập</FormLabel>
               <FormControl>
                 <div className="relative">
-                  <IconUser className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <IconMail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <Input
-                    placeholder="admin"
+                    type="text"
+                    placeholder="admin hoặc admin@gmail.com"
                     autoComplete="username"
                     autoFocus
                     className="pl-10"
@@ -87,16 +93,12 @@ export function LoginForm() {
             <FormItem>
               <FormLabel>Mật khẩu</FormLabel>
               <FormControl>
-                <div className="relative">
-                  <IconLock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <Input
-                    type="password"
-                    placeholder="••••••"
-                    autoComplete="current-password"
-                    className="pl-10"
-                    {...field}
-                  />
-                </div>
+                <PasswordInput
+                  placeholder="••••••"
+                  autoComplete="current-password"
+                  leftIcon={<IconLock className="h-4 w-4" />}
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -108,7 +110,16 @@ export function LoginForm() {
           {submitting ? 'Đang đăng nhập...' : 'Đăng nhập'}
         </Button>
 
-        <div className="pt-2 text-center text-[12px] text-slate-500">
+        <div className="flex justify-center pt-1">
+          <Link
+            to={ROUTES.FORGOT_PASSWORD}
+            className="text-[12px] text-teal-600 hover:text-teal-700 hover:underline"
+          >
+            Quên mật khẩu?
+          </Link>
+        </div>
+
+        <div className="text-center text-[12px] text-slate-500">
           Hệ thống chỉ dành cho cán bộ trường.
           <br />
           Liên hệ quản trị viên để được cấp tài khoản.

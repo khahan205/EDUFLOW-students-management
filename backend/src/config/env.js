@@ -23,6 +23,13 @@ export const env = {
   FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:5173',
 
   BCRYPT_ROUNDS: parseInt(process.env.BCRYPT_ROUNDS || '10', 10),
+
+  // SMTP — optional, nếu không set sẽ log link ra console (dev mode)
+  SMTP_HOST: process.env.SMTP_HOST || '',
+  SMTP_PORT: process.env.SMTP_PORT || '587',
+  SMTP_USER: process.env.SMTP_USER || '',
+  SMTP_PASS: process.env.SMTP_PASS || '',
+  SMTP_FROM: process.env.SMTP_FROM || '',
 };
 
 export const isDev = env.NODE_ENV === 'development';

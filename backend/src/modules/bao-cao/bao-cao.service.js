@@ -4,22 +4,46 @@ import { prisma } from '../../config/prisma.js';
  * Dashboard stats — 5 con số tổng quan.
  */
 export async function getDashboardStats() {
-  const [svDangHoc, monDangMo, dangKy, daThuAgg, congNoQuaHan] = await Promise.all([
+  const now = new Date();
+  const [svDangHoc, monDangMo, dangKy, daThuAgg, overduePhieu] = await Promise.all([
     prisma.sinhVien.count({ where: { TrangThai: 'DANG_HOC' } }),
     prisma.monHocMo.count({ where: { hocKy: { LaHienTai: true } } }),
     prisma.phieuHocPhi.count({ where: { hocKy: { LaHienTai: true } } }),
     prisma.phieuThu.aggregate({ _sum: { SoTienThu: true } }),
-    // Công nợ quá hạn: thực tế cần thêm trường HanDong vào PhieuHocPhi
-    // Hiện tại return 0 — sẽ implement khi có nghiệp vụ rõ
-    Promise.resolve(0),
+    // Đếm SV quá hạn: HanDong < now AND chưa đóng đủ
+    prisma.phieuHocPhi.groupBy({
+      by: ['MaSV', 'MaHK'],
+      where: { HanDong: { lt: now } },
+      _sum: { SoTienPhaiDong: true },
+    }),
   ]);
+
+  // Lọc những SV thực sự còn nợ (chưa đóng đủ)
+  let congNoQuaHan = 0;
+  if (overduePhieu.length > 0) {
+    const ptAgg = await prisma.phieuThu.groupBy({
+      by: ['MaSV', 'MaHK'],
+      where: {
+        OR: overduePhieu.map((r) => ({ MaSV: r.MaSV, MaHK: r.MaHK })),
+      },
+      _sum: { SoTienThu: true },
+    });
+    const thuMap = Object.fromEntries(
+      ptAgg.map((r) => [`${r.MaSV}|${r.MaHK}`, Number(r._sum.SoTienThu) || 0]),
+    );
+    congNoQuaHan = overduePhieu.filter((r) => {
+      const phaiDong = Number(r._sum.SoTienPhaiDong) || 0;
+      const daThu = thuMap[`${r.MaSV}|${r.MaHK}`] || 0;
+      return daThu < phaiDong;
+    }).length;
+  }
 
   return {
     sinhVienDangHoc: svDangHoc,
     monHocDangMo: monDangMo,
     dangKyHienTai: dangKy,
     doanhThuDaThu: Number(daThuAgg._sum.SoTienThu) || 0,
-    congNoQuaHan: congNoQuaHan,
+    congNoQuaHan,
   };
 }
 
@@ -56,10 +80,56 @@ export async function getRevenueBySemester() {
 }
 
 /**
- * Công nợ quá hạn — placeholder cho đến khi có HanDong field.
+ * Công nợ quá hạn — SV có HanDong < now và chưa đóng đủ học phí.
  */
 export async function getOverdueDebts() {
-  return [];
+  const now = new Date();
+
+  const overdueGroups = await prisma.phieuHocPhi.groupBy({
+    by: ['MaSV', 'MaHK'],
+    where: { HanDong: { lt: now } },
+    _sum: { SoTienPhaiDong: true },
+  });
+
+  if (overdueGroups.length === 0) return [];
+
+  const ptAgg = await prisma.phieuThu.groupBy({
+    by: ['MaSV', 'MaHK'],
+    where: { OR: overdueGroups.map((r) => ({ MaSV: r.MaSV, MaHK: r.MaHK })) },
+    _sum: { SoTienThu: true },
+  });
+  const thuMap = Object.fromEntries(
+    ptAgg.map((r) => [`${r.MaSV}|${r.MaHK}`, Number(r._sum.SoTienThu) || 0]),
+  );
+
+  const debtors = overdueGroups.filter((r) => {
+    const phaiDong = Number(r._sum.SoTienPhaiDong) || 0;
+    return (thuMap[`${r.MaSV}|${r.MaHK}`] || 0) < phaiDong;
+  });
+
+  if (debtors.length === 0) return [];
+
+  // Lấy tên SV + HK
+  const [svs, hks] = await Promise.all([
+    prisma.sinhVien.findMany({
+      where: { MaSV: { in: [...new Set(debtors.map((d) => d.MaSV))] } },
+      select: { MaSV: true, TenSV: true },
+    }),
+    prisma.hocKy.findMany({
+      where: { MaHK: { in: [...new Set(debtors.map((d) => d.MaHK))] } },
+      select: { MaHK: true, TenHK: true, NamHoc: true },
+    }),
+  ]);
+  const svMap = Object.fromEntries(svs.map((s) => [s.MaSV, s.TenSV]));
+  const hkMap = Object.fromEntries(hks.map((h) => [h.MaHK, `${h.TenHK} ${h.NamHoc}`]));
+
+  return debtors.map((r) => ({
+    MaSV: r.MaSV,
+    TenSV: svMap[r.MaSV] ?? r.MaSV,
+    MaHK: r.MaHK,
+    TenHK: hkMap[r.MaHK] ?? r.MaHK,
+    SoTienNo: (Number(r._sum.SoTienPhaiDong) || 0) - (thuMap[`${r.MaSV}|${r.MaHK}`] || 0),
+  }));
 }
 
 /**

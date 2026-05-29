@@ -4,6 +4,39 @@ import { generateReceiptId } from '../../utils/id-generator.js';
 import { getPricingConfig } from '../mon-hoc/mon-hoc.service.js';
 
 /**
+ * Lấy danh sách sinh viên đã đăng ký 1 môn học trong 1 học kỳ.
+ * Dùng cho giảng viên xem danh sách lớp.
+ */
+export async function listStudentsForCourse(maHK, maMH) {
+  const rows = await prisma.phieuHocPhi.findMany({
+    where: { MaHK: maHK, MaMH: maMH },
+    include: {
+      sinhVien: {
+        select: {
+          MaSV: true,
+          TenSV: true,
+          NgaySinh: true,
+          GioiTinh: true,
+          TenLop: true,
+          Email: true,
+        },
+      },
+    },
+    orderBy: { sinhVien: { TenSV: 'asc' } },
+  });
+
+  return rows.map((r) => ({
+    MaSV: r.sinhVien.MaSV,
+    TenSV: r.sinhVien.TenSV,
+    NgaySinh: r.sinhVien.NgaySinh,
+    GioiTinh: r.sinhVien.GioiTinh,
+    TenLop: r.sinhVien.TenLop,
+    Email: r.sinhVien.Email,
+    NgayDangKy: r.NgayLap,
+  }));
+}
+
+/**
  * Lấy danh sách môn được mở trong 1 HK + đánh dấu môn nào SV đã đăng ký.
  * Trả về shape: MonHoc[] với thêm field daDangKy: boolean.
  */
@@ -106,7 +139,20 @@ export async function register({ maSV, maHK, maMH }) {
       throw ApiError.badRequest(`Môn "${maMH}" không được mở trong học kỳ này.`);
     }
 
-    // 3. Check trùng đăng ký
+    // 3. Check điều kiện tiên quyết
+    const yeuCau = await tx.monHocYeuCau.findMany({ where: { MaMH: maMH } });
+    for (const yc of yeuCau) {
+      const daDangKy = await tx.phieuHocPhi.findFirst({
+        where: { MaSV: maSV, MaMH: yc.MaMHYeuCau },
+      });
+      if (!daDangKy) {
+        throw ApiError.badRequest(
+          `Sinh viên chưa hoàn thành môn tiên quyết: ${yc.MaMHYeuCau}.`,
+        );
+      }
+    }
+
+    // 5. Check trùng đăng ký
     const exists = await tx.phieuHocPhi.findUnique({
       where: { MaSV_MaMH_MaHK: { MaSV: maSV, MaMH: maMH, MaHK: maHK } },
     });

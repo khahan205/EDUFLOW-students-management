@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+﻿import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -73,7 +73,7 @@ export function ThuHocPhiDialog({ open, onOpenChange, row }: Props) {
           </DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-3 gap-3 rounded-lg bg-slate-50 p-3 text-[13px]">
+        <div className="grid grid-cols-3 gap-3 rounded-lg bg-slate-50 p-3 text-sm">
           <div>
             <div className="text-[10.5px] font-semibold uppercase tracking-wider text-slate-500">Tổng</div>
             <div className="font-mono font-semibold text-slate-900">{formatCurrencyVND(row.Tong)}</div>

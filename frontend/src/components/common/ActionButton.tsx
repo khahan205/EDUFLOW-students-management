@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+﻿import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 type Tone = 'edit' | 'delete' | 'pay' | 'history' | 'print' | 'confirm';
@@ -29,7 +29,7 @@ export function ActionButton({ tone, icon, label, className, ...props }: ActionB
       title={label}
       aria-label={label}
       className={cn(
-        'mr-1 inline-flex h-[30px] w-[30px] items-center justify-center rounded-md text-[13px] transition-transform hover:scale-110',
+        'mr-1 inline-flex h-[30px] w-[30px] items-center justify-center rounded-md text-sm transition-transform hover:scale-110',
         TONES[tone],
         className,
       )}
