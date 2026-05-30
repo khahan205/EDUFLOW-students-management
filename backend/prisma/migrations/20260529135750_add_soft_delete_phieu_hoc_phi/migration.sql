@@ -1,0 +1,6 @@
+-- AlterTable
+ALTER TABLE `phieuhocphi` ADD COLUMN `NgayHuy` DATETIME(3) NULL,
+    ADD COLUMN `TrangThai` VARCHAR(10) NOT NULL DEFAULT 'ACTIVE';
+
+-- CreateIndex
+CREATE INDEX `PHIEUHOCPHI_TrangThai_idx` ON `PHIEUHOCPHI`(`TrangThai`);

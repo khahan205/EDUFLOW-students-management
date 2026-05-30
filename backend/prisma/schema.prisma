@@ -166,6 +166,7 @@ model SinhVien {
 
   phieuHocPhis PhieuHocPhi[]
   phieuThus    PhieuThu[]
+  donGiaHans   DonGiaHan[]
 
   @@index([MaQueQuan])
   @@index([MaDoiTuong])
@@ -209,6 +210,7 @@ model HocKy {
   monHocMos    MonHocMo[]
   phieuHocPhis PhieuHocPhi[]
   phieuThus    PhieuThu[]
+  donGiaHans   DonGiaHan[]
 
   @@map("HOCKY")
 }
@@ -287,12 +289,33 @@ model PhieuHocPhi {
   SoTienDangKy    Decimal   @db.Decimal(12, 0)
   SoTienPhaiDong  Decimal   @db.Decimal(12, 0)
   HanDong         DateTime? @db.Date
+  TrangThai       String    @default("ACTIVE") @db.VarChar(10) // ACTIVE | HUY
+  NgayHuy         DateTime?
 
   @@unique([MaSV, MaMH, MaHK])
   @@index([MaSV])
   @@index([MaHK])
   @@index([MaMH])
+  @@index([TrangThai])
   @@map("PHIEUHOCPHI")
+}
+
+// DonGiaHan = đơn xin gia hạn nộp học phí của sinh viên.
+model DonGiaHan {
+  MaDon       Int       @id @default(autoincrement())
+  MaSV        String    @db.VarChar(20)
+  sinhVien    SinhVien  @relation(fields: [MaSV], references: [MaSV])
+  MaHK        String    @db.VarChar(30)
+  hocKy       HocKy     @relation(fields: [MaHK], references: [MaHK])
+  LyDo        String    @db.Text
+  TrangThai   String    @default("CHO_DUYET") @db.VarChar(20) // CHO_DUYET | DA_DUYET | TU_CHOI
+  NgayNop     DateTime  @default(now())
+  NgayXuLy    DateTime?
+  NgayGiaHan  DateTime? @db.Date
+  GhiChuAdmin String?   @db.Text
+
+  @@index([MaSV, MaHK])
+  @@map("DONGIAHAN")
 }
 
 // PhieuThu = 1 lần SV đóng tiền cho 1 HK.
@@ -307,6 +330,7 @@ model PhieuThu {
 
   NgayThu     DateTime  @default(now())
   SoTienThu   Decimal   @db.Decimal(12, 0)
+  HinhThucTT  String    @default("TIEN_MAT") @db.VarChar(20) // TIEN_MAT | CHUYEN_KHOAN
   GhiChu      String?   @db.VarChar(255)
 
   @@index([MaSV, MaHK])

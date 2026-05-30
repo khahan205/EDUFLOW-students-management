@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { IconListCheck, IconPlus, IconTrash, IconPencil, IconFileSpreadsheet } from '@tabler/icons-react';
 import { toast } from 'sonner';
@@ -39,19 +39,24 @@ function AddDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: bo
 
   const mutation = useMutation({
     mutationFn: () => addCTH({ maNganh, maMH, hocKy: Number(hocKy) }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['cth'] }); toast.success('Da them vao chuong trinh hoc'); onOpenChange(false); setMaNganh(''); setMaMH(''); setHocKy('1'); },
-    onError: (err: { message?: string }) => toast.error(err.message ?? 'Co loi xay ra'),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cth'] });
+      toast.success('Đã thêm vào chương trình học');
+      onOpenChange(false);
+      setMaNganh(''); setMaMH(''); setHocKy('1');
+    },
+    onError: (err: { message?: string }) => toast.error(err.message ?? 'Có lỗi xảy ra'),
   });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
-        <DialogHeader><DialogTitle>Them mon hoc vao chuong trinh</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Thêm môn học vào chương trình</DialogTitle></DialogHeader>
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <Label>Nganh hoc <span className="text-red-500">*</span></Label>
+            <Label>Ngành học <span className="text-red-500">*</span></Label>
             <Select value={maNganh} onValueChange={setMaNganh}>
-              <SelectTrigger><SelectValue placeholder="-- Chon nganh --" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="— Chọn ngành —" /></SelectTrigger>
               <SelectContent>
                 {(nganhQuery.data ?? []).map((n) => (
                   <SelectItem key={n.MaNganh} value={n.MaNganh}>{n.TenNganh}</SelectItem>
@@ -60,9 +65,9 @@ function AddDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: bo
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label>Mon hoc <span className="text-red-500">*</span></Label>
+            <Label>Môn học <span className="text-red-500">*</span></Label>
             <Select value={maMH} onValueChange={setMaMH}>
-              <SelectTrigger><SelectValue placeholder="-- Chon mon hoc --" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="— Chọn môn học —" /></SelectTrigger>
               <SelectContent>
                 {(monHocQuery.data ?? []).map((m) => (
                   <SelectItem key={m.MaMH} value={m.MaMH}>{m.TenMH} ({m.MaMH})</SelectItem>
@@ -71,14 +76,14 @@ function AddDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: bo
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label>Hoc ky trong chuong trinh (thu tu)</Label>
+            <Label>Học kỳ thứ tự trong chương trình</Label>
             <Input type="number" min={1} max={10} value={hocKy} onChange={(e) => setHocKy(e.target.value)} />
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Huy</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Huỷ</Button>
           <Button disabled={!maNganh || !maMH || mutation.isPending} onClick={() => mutation.mutate()}>
-            {mutation.isPending ? 'Dang them...' : 'Them'}
+            {mutation.isPending ? 'Đang thêm...' : 'Thêm'}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -92,23 +97,27 @@ function EditDialog({ row, onClose }: { row: CTHRow | null; onClose: () => void 
 
   const mutation = useMutation({
     mutationFn: () => updateCTH(row!.MaCTH, Number(hocKy)),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['cth'] }); toast.success('Da cap nhat'); onClose(); },
-    onError: (err: { message?: string }) => toast.error(err.message ?? 'Cap nhat that bai'),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cth'] });
+      toast.success('Đã cập nhật');
+      onClose();
+    },
+    onError: (err: { message?: string }) => toast.error(err.message ?? 'Cập nhật thất bại'),
   });
 
   if (!row) return null;
   return (
     <Dialog open={!!row} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-sm">
-        <DialogHeader><DialogTitle>Sua hoc ky chuong trinh</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Sửa học kỳ chương trình</DialogTitle></DialogHeader>
         <p className="text-sm text-slate-500">{row.TenMH} — {row.TenNganh}</p>
         <div className="space-y-1.5">
-          <Label>Hoc ky thu tu trong chuong trinh</Label>
+          <Label>Học kỳ thứ tự trong chương trình</Label>
           <Input type="number" min={1} max={10} value={hocKy} onChange={(e) => setHocKy(e.target.value)} autoFocus />
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Huy</Button>
-          <Button disabled={mutation.isPending} onClick={() => mutation.mutate()}>Luu</Button>
+          <Button variant="outline" onClick={onClose}>Huỷ</Button>
+          <Button disabled={mutation.isPending} onClick={() => mutation.mutate()}>Lưu</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -137,8 +146,11 @@ export function ChuongTrinhHocPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => deleteCTH(id),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['cth'] }); toast.success('Da xoa khoi chuong trinh'); },
-    onError: (err: { message?: string }) => toast.error(err.message ?? 'Xoa that bai'),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cth'] });
+      toast.success('Đã xóa khỏi chương trình');
+    },
+    onError: (err: { message?: string }) => toast.error(err.message ?? 'Xóa thất bại'),
   });
 
   const filtered = useMemo(() => {
@@ -165,14 +177,19 @@ export function ChuongTrinhHocPage() {
         actions={
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => exportToExcel(filtered, [
-              { header: 'Nganh', key: 'TenNganh' }, { header: 'Ma MH', key: 'MaMH' },
-              { header: 'Ten mon hoc', key: 'TenMH' }, { header: 'So TC', key: 'SoTinChi' },
-              { header: 'Loai mon', key: 'MaLoaiMon' }, { header: 'Hoc ky', key: 'HocKy' },
+              { header: 'Ngành học', key: 'TenNganh' },
+              { header: 'Mã môn', key: 'MaMH' },
+              { header: 'Tên môn học', key: 'TenMH' },
+              { header: 'Số TC', key: 'SoTinChi' },
+              { header: 'Loại môn', key: 'MaLoaiMon' },
+              { header: 'Học kỳ', key: 'HocKy' },
             ], 'chuong-trinh-hoc')} disabled={!filtered.length}>
-              <IconFileSpreadsheet className="h-4 w-4" />Xuat Excel
+              <IconFileSpreadsheet className="h-4 w-4" />
+              Xuất Excel
             </Button>
             <Button onClick={() => setAddOpen(true)}>
-              <IconPlus className="h-4 w-4" />Them mon vao CTH
+              <IconPlus className="h-4 w-4" />
+              Thêm môn vào CTH
             </Button>
           </div>
         }
@@ -182,14 +199,17 @@ export function ChuongTrinhHocPage() {
         <CardContent className="p-0">
           <div className="flex flex-wrap items-center gap-3 border-b p-4">
             <Input
-              placeholder="Tim ma mon, ten mon, ten nganh..."
-              value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              placeholder="Tìm mã môn, tên môn, tên ngành..."
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
               className="w-64"
             />
             <Select value={filterNganh || 'all'} onValueChange={(v) => { setFilterNganh(v === 'all' ? '' : v); setPage(1); }}>
-              <SelectTrigger className="w-52"><SelectValue placeholder="Tat ca nganh" /></SelectTrigger>
+              <SelectTrigger className="w-52">
+                <SelectValue placeholder="Tất cả ngành" />
+              </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tat ca nganh</SelectItem>
+                <SelectItem value="all">Tất cả ngành</SelectItem>
                 {(nganhQuery.data ?? []).map((n) => (
                   <SelectItem key={n.MaNganh} value={n.MaNganh}>
                     {n.TenNganh} {groupedByNganh[n.MaNganh] ? `(${groupedByNganh[n.MaNganh]})` : ''}
@@ -198,7 +218,13 @@ export function ChuongTrinhHocPage() {
               </SelectContent>
             </Select>
             {(search || filterNganh) && (
-              <button type="button" onClick={() => { setSearch(''); setFilterNganh(''); setPage(1); }} className="text-sm text-slate-500 underline hover:text-slate-800">Xoa bo loc</button>
+              <button
+                type="button"
+                onClick={() => { setSearch(''); setFilterNganh(''); setPage(1); }}
+                className="text-sm text-slate-500 underline hover:text-slate-800"
+              >
+                Xoá bộ lọc
+              </button>
             )}
           </div>
 
@@ -210,13 +236,13 @@ export function ChuongTrinhHocPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Nganh hoc</TableHead>
-                    <TableHead>Ma mon</TableHead>
-                    <TableHead>Ten mon hoc</TableHead>
-                    <TableHead className="text-center">So TC</TableHead>
-                    <TableHead className="text-center">Loai mon</TableHead>
-                    <TableHead className="text-center">Hoc ky</TableHead>
-                    <TableHead className="text-center">Thao tac</TableHead>
+                    <TableHead>Ngành học</TableHead>
+                    <TableHead>Mã môn</TableHead>
+                    <TableHead>Tên môn học</TableHead>
+                    <TableHead className="text-center">Số TC</TableHead>
+                    <TableHead className="text-center">Loại môn</TableHead>
+                    <TableHead className="text-center">Học kỳ</TableHead>
+                    <TableHead className="text-center">Thao tác</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -233,18 +259,26 @@ export function ChuongTrinhHocPage() {
                         <Badge variant={r.MaLoaiMon === 'TH' ? 'info' : 'muted'}>{r.MaLoaiMon}</Badge>
                       </TableCell>
                       <TableCell className="text-center">
-                        <span className="rounded-full bg-teal-50 px-2.5 py-0.5 text-sm font-semibold text-teal-700">HK{r.HocKy}</span>
+                        <span className="rounded-full bg-teal-50 px-2.5 py-0.5 text-sm font-semibold text-teal-700">
+                          HK{r.HocKy}
+                        </span>
                       </TableCell>
                       <TableCell className="text-center">
-                        <ActionButton tone="edit" icon={<IconPencil className="h-3.5 w-3.5" />} label="Sua" onClick={() => setEditRow(r)} />
-                        <ActionButton tone="delete" icon={<IconTrash className="h-3.5 w-3.5" />} label="Xoa" onClick={() => setToDelete(r)} />
+                        <ActionButton tone="edit" icon={<IconPencil className="h-3.5 w-3.5" />} label="Sửa" onClick={() => setEditRow(r)} />
+                        <ActionButton tone="delete" icon={<IconTrash className="h-3.5 w-3.5" />} label="Xóa" onClick={() => setToDelete(r)} />
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
               <div className="border-t px-4">
-                <Pagination total={filtered.length} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} />
+                <Pagination
+                  total={filtered.length}
+                  page={page}
+                  pageSize={pageSize}
+                  onPageChange={setPage}
+                  onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+                />
               </div>
             </>
           )}
@@ -254,10 +288,11 @@ export function ChuongTrinhHocPage() {
       <AddDialog open={addOpen} onOpenChange={setAddOpen} />
       <EditDialog row={editRow} onClose={() => setEditRow(null)} />
       <ConfirmDialog
-        open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}
-        title="Xoa khoi chuong trinh hoc"
-        description={`Xoa mon "${toDelete?.TenMH}" khoi chuong trinh nganh "${toDelete?.TenNganh}"?`}
-        confirmText="Xoa"
+        open={!!toDelete}
+        onOpenChange={(o) => !o && setToDelete(null)}
+        title="Xóa khỏi chương trình học"
+        description={`Xóa môn "${toDelete?.TenMH}" khỏi chương trình ngành "${toDelete?.TenNganh}"?`}
+        confirmText="Xóa"
         onConfirm={() => { if (toDelete) deleteMutation.mutate(toDelete.MaCTH); }}
       />
     </>

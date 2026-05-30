@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE `phieuthu` ADD COLUMN `HinhThucTT` VARCHAR(20) NOT NULL DEFAULT 'TIEN_MAT';

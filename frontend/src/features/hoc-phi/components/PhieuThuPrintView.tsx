@@ -3,6 +3,11 @@ import { formatCurrencyVND, formatDate } from '@/lib/format';
 import type { PhieuThu } from '@/types';
 import type { ThuHocPhiRow } from '@/types';
 
+const HINH_THUC_LABEL: Record<string, string> = {
+  TIEN_MAT:     'Tiền mặt',
+  CHUYEN_KHOAN: 'Chuyển khoản ngân hàng',
+};
+
 interface Props {
   row: ThuHocPhiRow;
   receipts: PhieuThu[];
@@ -33,6 +38,7 @@ export const PhieuThuPrintView = forwardRef<HTMLDivElement, Props>(({ row, recei
             <tr className="border-b-2 border-black">
               <th className="text-left py-2 pr-4">Mã phiếu</th>
               <th className="text-left py-2 pr-4">Ngày thu</th>
+              <th className="text-left py-2 pr-4">Hình thức</th>
               <th className="text-right py-2">Số tiền</th>
             </tr>
           </thead>
@@ -41,6 +47,7 @@ export const PhieuThuPrintView = forwardRef<HTMLDivElement, Props>(({ row, recei
               <tr key={p.MaPhieuThu} className="border-b border-gray-200">
                 <td className="py-1.5 pr-4 font-mono">{p.MaPhieuThu}</td>
                 <td className="py-1.5 pr-4">{formatDate(p.NgayThu)}</td>
+                <td className="py-1.5 pr-4">{HINH_THUC_LABEL[(p as {HinhThucTT?: string}).HinhThucTT ?? 'TIEN_MAT'] ?? 'Tiền mặt'}</td>
                 <td className="py-1.5 text-right font-mono">{formatCurrencyVND(p.SoTienThu)}</td>
               </tr>
             ))}

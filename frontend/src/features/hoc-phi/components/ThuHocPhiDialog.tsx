@@ -1,9 +1,9 @@
-﻿import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { IconCash } from '@tabler/icons-react';
+import { IconCash, IconBuildingBank } from '@tabler/icons-react';
 import {
   Dialog,
   DialogContent,
@@ -21,6 +21,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { apiClient } from '@/services/api-client';
 import { payTuition } from '../api/hoc-phi-api';
 import { thuHocPhiSchema, type ThuHocPhiInput } from '../schemas/thu-hoc-phi.schema';
 import { formatCurrencyVND } from '@/lib/format';
@@ -32,8 +33,22 @@ interface Props {
   row: ThuHocPhiRow | null;
 }
 
+interface ThamSo { TenThamSo: string; GiaTri: string; }
+
+function buildVietQRUrl(bankId: string, accountNo: string, accountName: string, amount: number, content: string) {
+  const template = 'compact';
+  const base = `https://img.vietqr.io/image/${bankId}-${accountNo}-${template}.png`;
+  const params = new URLSearchParams({
+    amount: String(amount),
+    addInfo: content,
+    accountName: accountName,
+  });
+  return `${base}?${params.toString()}`;
+}
+
 export function ThuHocPhiDialog({ open, onOpenChange, row }: Props) {
   const qc = useQueryClient();
+  const [hinhThuc, setHinhThuc] = useState<'TIEN_MAT' | 'CHUYEN_KHOAN'>('TIEN_MAT');
 
   const form = useForm<ThuHocPhiInput>({
     resolver: zodResolver(thuHocPhiSchema),
@@ -43,13 +58,45 @@ export function ThuHocPhiDialog({ open, onOpenChange, row }: Props) {
   useEffect(() => {
     if (open && row) {
       form.reset({ soTien: row.ConLai, ghiChu: '' });
+      setHinhThuc('TIEN_MAT');
     }
   }, [open, row, form]);
+
+  const thamSoQuery = useQuery({
+    queryKey: ['tham-so'],
+    queryFn: async () => {
+      const { data } = await apiClient.get<ThamSo[]>('/master-data/tham-so');
+      return data;
+    },
+    staleTime: 300_000,
+    enabled: open,
+  });
+
+  const thamSoMap = Object.fromEntries(
+    (thamSoQuery.data ?? []).map((t) => [t.TenThamSo, t.GiaTri])
+  );
+  const bankId      = thamSoMap['ngan_hang_ma_vietqr'] ?? 'VCB';
+  const accountNo   = thamSoMap['ngan_hang_so_tk']     ?? '1234567890';
+  const accountName = thamSoMap['ngan_hang_chu_tk']    ?? 'TRUONG UIT';
+  const bankName    = thamSoMap['ngan_hang_ten']        ?? 'Vietcombank';
+  const minCK       = Number(thamSoMap['chuyen_khoan_so_tien_toi_thieu'] ?? 1000);
+
+  const soTienWatch = form.watch('soTien');
+
+  const qrUrl = hinhThuc === 'CHUYEN_KHOAN' && row && soTienWatch >= minCK
+    ? buildVietQRUrl(bankId, accountNo, accountName, soTienWatch, `HOCPHI ${row.MaSV} ${row.MaHK}`)
+    : null;
 
   const mutation = useMutation({
     mutationFn: (input: ThuHocPhiInput) => {
       if (!row) throw new Error('Missing row');
-      return payTuition({ maSV: row.MaSV, maHK: row.MaHK, soTien: input.soTien, ghiChu: input.ghiChu });
+      return payTuition({
+        maSV: row.MaSV,
+        maHK: row.MaHK,
+        soTien: input.soTien,
+        ghiChu: input.ghiChu,
+        hinhThucTT: hinhThuc,
+      });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['hoc-phi'] });
@@ -63,9 +110,12 @@ export function ThuHocPhiDialog({ open, onOpenChange, row }: Props) {
 
   if (!row) return null;
 
+  const isBankTransfer = hinhThuc === 'CHUYEN_KHOAN';
+  const amountTooSmall = isBankTransfer && soTienWatch < minCK;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <IconCash className="h-5 w-5 text-success" />
@@ -73,20 +123,82 @@ export function ThuHocPhiDialog({ open, onOpenChange, row }: Props) {
           </DialogTitle>
         </DialogHeader>
 
+        {/* Tóm tắt số tiền */}
         <div className="grid grid-cols-3 gap-3 rounded-lg bg-slate-50 p-3 text-sm">
           <div>
-            <div className="text-[10.5px] font-semibold uppercase tracking-wider text-slate-500">Tổng</div>
-            <div className="font-mono font-semibold text-slate-900">{formatCurrencyVND(row.Tong)}</div>
+            <p className="text-[10.5px] font-semibold uppercase tracking-wider text-slate-500">Tổng</p>
+            <p className="font-mono font-semibold text-slate-900">{formatCurrencyVND(row.Tong)}</p>
           </div>
           <div>
-            <div className="text-[10.5px] font-semibold uppercase tracking-wider text-slate-500">Đã đóng</div>
-            <div className="font-mono font-semibold text-success">{formatCurrencyVND(row.DaDong)}</div>
+            <p className="text-[10.5px] font-semibold uppercase tracking-wider text-slate-500">Đã đóng</p>
+            <p className="font-mono font-semibold text-success">{formatCurrencyVND(row.DaDong)}</p>
           </div>
           <div>
-            <div className="text-[10.5px] font-semibold uppercase tracking-wider text-slate-500">Còn lại</div>
-            <div className="font-mono font-semibold text-danger">{formatCurrencyVND(row.ConLai)}</div>
+            <p className="text-[10.5px] font-semibold uppercase tracking-wider text-slate-500">Còn lại</p>
+            <p className="font-mono font-semibold text-danger">{formatCurrencyVND(row.ConLai)}</p>
           </div>
         </div>
+
+        {/* Hình thức thanh toán */}
+        <div className="space-y-2">
+          <p className="text-sm font-medium text-slate-700">Hình thức thanh toán</p>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setHinhThuc('TIEN_MAT')}
+              className={`flex items-center gap-2.5 rounded-lg border-2 px-4 py-3 text-sm font-medium transition-colors ${
+                hinhThuc === 'TIEN_MAT'
+                  ? 'border-teal-600 bg-teal-50 text-teal-700'
+                  : 'border-slate-200 text-slate-600 hover:border-slate-300'
+              }`}
+            >
+              <IconCash className="h-5 w-5 shrink-0" />
+              Tiền mặt
+            </button>
+            <button
+              type="button"
+              onClick={() => setHinhThuc('CHUYEN_KHOAN')}
+              className={`flex items-center gap-2.5 rounded-lg border-2 px-4 py-3 text-sm font-medium transition-colors ${
+                hinhThuc === 'CHUYEN_KHOAN'
+                  ? 'border-teal-600 bg-teal-50 text-teal-700'
+                  : 'border-slate-200 text-slate-600 hover:border-slate-300'
+              }`}
+            >
+              <IconBuildingBank className="h-5 w-5 shrink-0" />
+              Chuyển khoản
+            </button>
+          </div>
+        </div>
+
+        {/* Thông tin chuyển khoản + QR */}
+        {isBankTransfer && (
+          <div className="rounded-lg border border-teal-200 bg-teal-50 p-4">
+            <div className="flex gap-4">
+              <div className="flex-1 space-y-1 text-sm">
+                <p className="font-semibold text-teal-800">{bankName}</p>
+                <p><span className="text-slate-500">Số TK:</span> <span className="font-mono font-semibold">{accountNo}</span></p>
+                <p><span className="text-slate-500">Chủ TK:</span> <span className="font-medium">{accountName}</span></p>
+                <p><span className="text-slate-500">Nội dung:</span> <span className="font-mono text-xs">HOCPHI {row.MaSV} {row.MaHK}</span></p>
+                {amountTooSmall && (
+                  <p className="text-xs text-red-600 font-medium">
+                    ⚠ Số tiền tối thiểu chuyển khoản: {formatCurrencyVND(minCK)}
+                  </p>
+                )}
+              </div>
+              {qrUrl && (
+                <div className="shrink-0">
+                  <img
+                    src={qrUrl}
+                    alt="QR chuyển khoản"
+                    className="h-28 w-28 rounded-lg border border-teal-200"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
+                  <p className="mt-1 text-center text-[10px] text-slate-400">Quét để CK</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit((v) => mutation.mutate(v))} className="space-y-3">
@@ -97,10 +209,11 @@ export function ThuHocPhiDialog({ open, onOpenChange, row }: Props) {
                 <FormItem>
                   <FormLabel>Số tiền thu lần này (VND)</FormLabel>
                   <FormControl>
-                    <Input type="number" min={1} max={row.ConLai} step={100_000} {...field} />
+                    <Input type="number" min={isBankTransfer ? minCK : 1} max={row.ConLai} step={100_000} {...field} />
                   </FormControl>
                   <p className="text-[11.5px] text-slate-500">
-                    Tối đa: {formatCurrencyVND(row.ConLai)} (không được thu vượt số nợ)
+                    Tối đa: {formatCurrencyVND(row.ConLai)}
+                    {isBankTransfer && ` · Tối thiểu CK: ${formatCurrencyVND(minCK)}`}
                   </p>
                   <FormMessage />
                 </FormItem>
@@ -123,7 +236,11 @@ export function ThuHocPhiDialog({ open, onOpenChange, row }: Props) {
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Huỷ
               </Button>
-              <Button type="submit" variant="success" disabled={mutation.isPending}>
+              <Button
+                type="submit"
+                variant="success"
+                disabled={mutation.isPending || amountTooSmall}
+              >
                 {mutation.isPending ? 'Đang thu...' : 'Xác nhận thu'}
               </Button>
             </DialogFooter>

@@ -3,8 +3,11 @@ import { validate } from '../../utils/validate.js';
 import { sinhVienCreateSchema, sinhVienUpdateSchema } from './sinh-vien.schema.js';
 import * as svc from './sinh-vien.service.js';
 
-export const listCtrl = asyncHandler(async (_req, res) => {
-  res.json(await svc.list());
+export const listCtrl = asyncHandler(async (req, res) => {
+  const page  = Math.max(1, parseInt(req.query.page)  || 1);
+  const limit = Math.min(100, parseInt(req.query.limit) || 20);
+  const { search = '', maNganh = '', trangThai = '' } = req.query;
+  res.json(await svc.list({ page, limit, search, maNganh, trangThai }));
 });
 
 export const getByMaCtrl = asyncHandler(async (req, res) => {

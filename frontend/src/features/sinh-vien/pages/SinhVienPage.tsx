@@ -35,6 +35,8 @@ import {
   fetchMonMoChoSV,
   registerMon,
   unregisterMon,
+  fetchDaHuyDangKy,
+  restoreMon,
 } from '@/features/dang-ky/api/dang-ky-api';
 import { useAuthStore } from '@/stores/auth-store';
 import type { SinhVien } from '@/types';
@@ -79,10 +81,29 @@ function SinhVienDetailSheet({
       unregisterMon({ maSV: sv!.MaSV, maHK: hkQuery.data!.MaHK, maMH }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['mon-mo-cho-sv', sv?.MaSV] });
+      qc.invalidateQueries({ queryKey: ['da-huy', sv?.MaSV] });
       qc.invalidateQueries({ queryKey: ['dashboard'] });
-      toast.success('Đã huỷ đăng ký môn học');
+      toast.success('Đã huỷ đăng ký — có thể khôi phục trong mục "Đã huỷ"');
     },
     onError: (err: { message?: string }) => toast.error(err.message ?? 'Huỷ đăng ký thất bại'),
+  });
+
+  const daHuyQuery = useQuery({
+    queryKey: ['da-huy', sv?.MaSV, hkQuery.data?.MaHK],
+    queryFn: () => fetchDaHuyDangKy(sv!.MaSV, hkQuery.data!.MaHK),
+    enabled: !!sv && !!hkQuery.data && canEdit,
+  });
+
+  const restoreMutation = useMutation({
+    mutationFn: (maMH: string) =>
+      restoreMon({ maSV: sv!.MaSV, maHK: hkQuery.data!.MaHK, maMH }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['mon-mo-cho-sv', sv?.MaSV] });
+      qc.invalidateQueries({ queryKey: ['da-huy', sv?.MaSV] });
+      qc.invalidateQueries({ queryKey: ['dashboard'] });
+      toast.success('Đã khôi phục đăng ký môn học');
+    },
+    onError: (err: { message?: string }) => toast.error(err.message ?? 'Khôi phục thất bại'),
   });
 
   const registered = useMemo(
@@ -291,6 +312,52 @@ function SinhVienDetailSheet({
                   )}
                 </section>
               )}
+
+              {/* Môn học đã huỷ — có thể khôi phục */}
+              {canEdit && (daHuyQuery.data ?? []).length > 0 && (
+                <section className="mt-4">
+                  <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-amber-700">
+                    <IconTrash className="h-4 w-4" />
+                    Môn học đã huỷ ({daHuyQuery.data!.length}) — có thể khôi phục
+                  </p>
+                  <div className="overflow-hidden rounded-lg border border-amber-200 bg-amber-50">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Tên môn học</TableHead>
+                          <TableHead>Mã môn</TableHead>
+                          <TableHead className="text-center">TC</TableHead>
+                          <TableHead className="text-slate-500">Ngày huỷ</TableHead>
+                          <TableHead className="text-right">Khôi phục</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {daHuyQuery.data!.map((m) => (
+                          <TableRow key={m.MaMH} className="bg-amber-50/50">
+                            <TableCell className="font-medium text-slate-600 line-through">{m.TenMH}</TableCell>
+                            <TableCell className="font-mono text-slate-400">{m.MaMH}</TableCell>
+                            <TableCell className="text-center text-slate-400">{m.SoTinChi}</TableCell>
+                            <TableCell className="text-xs text-slate-400">
+                              {m.NgayHuy ? new Date(m.NgayHuy).toLocaleDateString('vi-VN') : '—'}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={isBusy}
+                                onClick={() => restoreMutation.mutate(m.MaMH)}
+                                className="border-amber-300 text-amber-700 hover:bg-amber-100"
+                              >
+                                Khôi phục
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </section>
+              )}
             </div>
           </>
         )}
@@ -307,24 +374,22 @@ export function SinhVienPage() {
   const [selectedSV, setSelectedSV] = useState<SinhVien | null>(null);
   const [search, setSearch] = useState('');
   const [filterTrangThai, setFilterTrangThai] = useState('');
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
+
+  // Reset về trang 1 khi filter thay đổi
+  const handleSearch = (v: string) => { setSearch(v); setPage(1); };
+  const handleFilter = (v: string) => { setFilterTrangThai(v); setPage(1); };
 
   const listQuery = useQuery({
-    queryKey: ['sinh-vien'],
-    queryFn: fetchSinhVienList,
+    queryKey: ['sinh-vien', page, pageSize, search, filterTrangThai],
+    queryFn: () => fetchSinhVienList({ page, limit: pageSize, search, trangThai: filterTrangThai }),
+    placeholderData: (prev) => prev,
   });
 
-  const filtered = useMemo(() => {
-    if (!listQuery.data) return [];
-    const q = search.toLowerCase();
-    return listQuery.data.filter(
-      (sv) =>
-        (!q ||
-          sv.MaSV.toLowerCase().includes(q) ||
-          sv.TenSV.toLowerCase().includes(q) ||
-          (sv.Email?.toLowerCase().includes(q) ?? false)) &&
-        (!filterTrangThai || sv.TrangThai === filterTrangThai),
-    );
-  }, [listQuery.data, search, filterTrangThai]);
+  const rows = listQuery.data?.data ?? [];
+  const total = listQuery.data?.total ?? 0;
+  const totalPages = listQuery.data?.totalPages ?? 1;
 
   const deleteMutation = useMutation({
     mutationFn: (maSV: string) => deleteSinhVien(maSV),
@@ -339,9 +404,11 @@ export function SinhVienPage() {
   const handleEdit = (sv: SinhVien) => { setEditing(sv); setFormOpen(true); };
   const handleAdd = () => { setEditing(null); setFormOpen(true); };
 
-  const handleExport = () => {
+  const handleExport = async () => {
+    // Xuất toàn bộ (không phân trang)
+    const all = await fetchSinhVienList({ limit: 9999, search, trangThai: filterTrangThai });
     exportToExcel(
-      filtered,
+      all.data,
       [
         { header: 'Mã SV', key: 'MaSV' },
         { header: 'Họ tên', key: 'TenSV' },
@@ -361,7 +428,7 @@ export function SinhVienPage() {
         iconTone="info"
         actions={
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handleExport} disabled={filtered.length === 0}>
+            <Button variant="outline" onClick={handleExport} disabled={total === 0}>
               <IconFileSpreadsheet className="h-4 w-4" />
               Xuất Excel
             </Button>
@@ -377,17 +444,38 @@ export function SinhVienPage() {
         <div className="h-[300px] animate-pulse rounded-xl bg-slate-100" />
       )}
 
-      {listQuery.data && (
-        <SinhVienTable
-          rows={filtered}
-          onEdit={handleEdit}
-          onDelete={(sv) => setToDelete(sv)}
-          onRowClick={(sv) => setSelectedSV(sv)}
-          search={search}
-          onSearchChange={(v) => setSearch(v)}
-          filterTrangThai={filterTrangThai}
-          onFilterTrangThaiChange={(v) => setFilterTrangThai(v)}
-        />
+      {!listQuery.isLoading && (
+        <>
+          <SinhVienTable
+            rows={rows}
+            onEdit={handleEdit}
+            onDelete={(sv) => setToDelete(sv)}
+            onRowClick={(sv) => setSelectedSV(sv)}
+            search={search}
+            onSearchChange={handleSearch}
+            filterTrangThai={filterTrangThai}
+            onFilterTrangThaiChange={handleFilter}
+          />
+          {/* Server-side pagination info */}
+          <div className="mt-2 flex items-center justify-between text-sm text-slate-500">
+            <span>Tổng: <strong>{total}</strong> sinh viên</span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={page <= 1}
+                onClick={() => setPage(p => p - 1)}
+                className="rounded border px-2 py-1 hover:bg-slate-100 disabled:opacity-40"
+              >←</button>
+              <span>Trang {page} / {totalPages}</span>
+              <button
+                type="button"
+                disabled={page >= totalPages}
+                onClick={() => setPage(p => p + 1)}
+                className="rounded border px-2 py-1 hover:bg-slate-100 disabled:opacity-40"
+              >→</button>
+            </div>
+          </div>
+        </>
       )}
 
       <SinhVienFormDialog open={formOpen} onOpenChange={setFormOpen} editing={editing} />

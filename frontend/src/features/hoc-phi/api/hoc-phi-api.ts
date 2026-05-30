@@ -29,6 +29,7 @@ export async function payTuition(payload: {
   maHK: string;
   soTien: number;
   ghiChu?: string;
+  hinhThucTT?: string;
 }) {
   if (USE_MOCK) {
     await delay();

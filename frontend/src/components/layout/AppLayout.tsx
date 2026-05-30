@@ -1,17 +1,17 @@
 import { Outlet } from 'react-router-dom';
-import { Navbar } from './Navbar';
+import { Sidebar } from './Sidebar';
 
-/**
- * Layout cho các trang đã đăng nhập: navbar trên + nội dung trang.
- * Outlet sẽ render <DashboardPage />, <SinhVienPage />, ... tuỳ route.
- */
 export function AppLayout() {
   return (
-    <div className="min-h-screen">
-      <Navbar />
-      <main className="mx-auto max-w-[1400px] px-6 py-7 pb-20">
-        <Outlet />
-      </main>
+    <div className="flex h-screen overflow-hidden bg-slate-50">
+      <Sidebar />
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <main className="flex-1 overflow-y-auto px-6 py-7 pb-20">
+          <div className="mx-auto max-w-[1200px]">
+            <Outlet />
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

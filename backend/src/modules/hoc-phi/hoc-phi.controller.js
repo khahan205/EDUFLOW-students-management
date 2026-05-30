@@ -14,7 +14,7 @@ export const historyCtrl = asyncHandler(async (req, res) => {
 
 export const payCtrl = asyncHandler(async (req, res) => {
   const input = validate(paySchema, req.body);
-  res.status(201).json(await svc.pay(input));
+  res.status(201).json(await svc.pay({ ...input, hinhThucTT: req.body.hinhThucTT }));
 });
 
 export const searchPhieuDangKyCtrl = asyncHandler(async (req, res) => {

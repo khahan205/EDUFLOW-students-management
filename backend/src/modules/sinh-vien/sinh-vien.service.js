@@ -54,11 +54,36 @@ function normalizeInput(input) {
   return out;
 }
 
-export async function list() {
-  const rows = await prisma.sinhVien.findMany({
-    orderBy: { MaSV: 'asc' },
-  });
-  return rows.map(toResponse);
+export async function list({ page = 1, limit = 20, search = '', maNganh = '', trangThai = '' } = {}) {
+  const where = {
+    ...(search ? {
+      OR: [
+        { MaSV: { contains: search } },
+        { TenSV: { contains: search } },
+        { TenLop: { contains: search } },
+        { Email: { contains: search } },
+      ],
+    } : {}),
+    ...(maNganh ? { MaNganh: maNganh } : {}),
+    ...(trangThai && STATUS_VI_TO_DB[trangThai] ? { TrangThai: STATUS_VI_TO_DB[trangThai] } : {}),
+  };
+
+  const [total, rows] = await Promise.all([
+    prisma.sinhVien.count({ where }),
+    prisma.sinhVien.findMany({
+      where,
+      orderBy: { MaSV: 'asc' },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+  ]);
+
+  return {
+    data: rows.map(toResponse),
+    total,
+    page,
+    totalPages: Math.ceil(total / limit),
+  };
 }
 
 export async function getByMa(maSV) {

@@ -18,6 +18,7 @@ import { HocPhiTable } from '../components/HocPhiTable';
 import { ThuHocPhiDialog } from '../components/ThuHocPhiDialog';
 import { PhieuThuHistoryDialog } from '../components/PhieuThuHistoryDialog';
 import { PhieuThuPrintView } from '../components/PhieuThuPrintView';
+import { DonGiaHanTab } from '../components/DonGiaHanTab';
 import type { ThuHocPhiRow, PhieuThu } from '@/types';
 
 interface HocKyOption { MaHK: string; TenHK: string; NamHoc: string; }
@@ -342,6 +343,7 @@ export function HocPhiPage() {
           <TabsTrigger value="list">Danh sách học phí</TabsTrigger>
           <TabsTrigger value="phieu-dk">Tra cứu phiếu đăng ký</TabsTrigger>
           <TabsTrigger value="phieu-thu">Tra cứu phiếu thu</TabsTrigger>
+          <TabsTrigger value="gia-han">Đơn gia hạn</TabsTrigger>
         </TabsList>
 
         <TabsContent value="list">
@@ -367,6 +369,10 @@ export function HocPhiPage() {
 
         <TabsContent value="phieu-thu">
           <PhieuThuTab />
+        </TabsContent>
+
+        <TabsContent value="gia-han">
+          <DonGiaHanTab />
         </TabsContent>
       </Tabs>
 

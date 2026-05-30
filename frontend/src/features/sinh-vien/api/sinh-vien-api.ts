@@ -5,12 +5,22 @@ import type { SinhVien } from '@/types';
 import { sinhVienStore } from '../mocks/sinh-vien-mocks';
 import type { SinhVienInput } from '../schemas/sinh-vien.schema';
 
-export async function fetchSinhVienList(): Promise<SinhVien[]> {
+export interface SinhVienPage {
+  data: SinhVien[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
+export async function fetchSinhVienList(params?: {
+  page?: number; limit?: number; search?: string; maNganh?: string; trangThai?: string;
+}): Promise<SinhVienPage> {
   if (USE_MOCK) {
     await delay();
-    return sinhVienStore.list();
+    const all = sinhVienStore.list();
+    return { data: all, total: all.length, page: 1, totalPages: 1 };
   }
-  const { data } = await apiClient.get<SinhVien[]>('/sinh-vien');
+  const { data } = await apiClient.get<SinhVienPage>('/sinh-vien', { params });
   return data;
 }
 

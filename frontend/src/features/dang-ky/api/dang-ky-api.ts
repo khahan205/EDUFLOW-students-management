@@ -64,3 +64,26 @@ export async function unregisterMon(payload: { maSV: string; maHK: string; maMH:
   const { data } = await apiClient.delete('/dang-ky', { data: payload });
   return data;
 }
+
+export interface DaHuyRow {
+  MaPhieu: string;
+  MaMH: string;
+  TenMH: string;
+  SoTinChi: number;
+  NgayHuy: string | null;
+  SoTienPhaiDong: number;
+}
+
+export async function fetchDaHuyDangKy(maSV: string, maHK: string): Promise<DaHuyRow[]> {
+  if (USE_MOCK) return [];
+  const { data } = await apiClient.get<DaHuyRow[]>(`/dang-ky/${maSV}/da-huy`, {
+    params: { maHK },
+  });
+  return data;
+}
+
+export async function restoreMon(payload: { maSV: string; maHK: string; maMH: string }) {
+  if (USE_MOCK) return {};
+  const { data } = await apiClient.post('/dang-ky/restore', payload);
+  return data;
+}

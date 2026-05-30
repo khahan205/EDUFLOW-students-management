@@ -13,6 +13,7 @@ export async function listHocPhiRows() {
   // Aggregate PhieuHocPhi theo (MaSV, MaHK)
   const phieuHocPhiAgg = await prisma.phieuHocPhi.groupBy({
     by: ['MaSV', 'MaHK'],
+    where: { TrangThai: 'ACTIVE' },
     _sum: { SoTienPhaiDong: true },
   });
 
@@ -78,6 +79,7 @@ export async function getHistory(maSV, maHK) {
     MaHK: p.MaHK,
     NgayThu: p.NgayThu.toISOString(),
     SoTienThu: Number(p.SoTienThu),
+    HinhThucTT: p.HinhThucTT,
     GhiChu: p.GhiChu,
   }));
 }
@@ -92,7 +94,7 @@ export async function getHistory(maSV, maHK) {
  *   - Sinh MaPhieuThu duy nhất
  *   - Toàn bộ chạy trong transaction để đảm bảo no race condition
  */
-export async function pay({ maSV, maHK, soTien, ghiChu }) {
+export async function pay({ maSV, maHK, soTien, ghiChu, hinhThucTT }) {
   return prisma.$transaction(async (tx) => {
     // Tổng số tiền phải đóng của SV trong HK
     const phpAgg = await tx.phieuHocPhi.aggregate({
@@ -104,6 +106,16 @@ export async function pay({ maSV, maHK, soTien, ghiChu }) {
     if (tong === 0) {
       throw ApiError.badRequest(
         `Sinh viên "${maSV}" chưa đăng ký môn nào trong học kỳ này.`,
+      );
+    }
+
+    // Kiểm tra số lần đã đóng (tối đa 2 lần/HK)
+    const soLanDaDong = await tx.phieuThu.count({ where: { MaSV: maSV, MaHK: maHK } });
+    if (soLanDaDong >= 2) {
+      throw ApiError.badRequest(
+        `Sinh viên đã đóng học phí ${soLanDaDong} lần trong học kỳ này. ` +
+        `Hệ thống chỉ cho phép tối đa 2 lần đóng/học kỳ. ` +
+        `Nếu cần điều chỉnh, vui lòng liên hệ phòng tài chính.`,
       );
     }
 
@@ -137,6 +149,7 @@ export async function pay({ maSV, maHK, soTien, ghiChu }) {
         MaSV: maSV,
         MaHK: maHK,
         SoTienThu: soTien,
+        HinhThucTT: hinhThucTT === 'CHUYEN_KHOAN' ? 'CHUYEN_KHOAN' : 'TIEN_MAT',
         GhiChu: ghiChu ?? null,
       },
     });
@@ -148,12 +161,14 @@ export async function pay({ maSV, maHK, soTien, ghiChu }) {
         MaHK: phieuThu.MaHK,
         NgayThu: phieuThu.NgayThu.toISOString(),
         SoTienThu: Number(phieuThu.SoTienThu),
+        HinhThucTT: phieuThu.HinhThucTT,
         GhiChu: phieuThu.GhiChu,
       },
       summary: {
         Tong: tong,
         DaDong: daDong + soTien,
         ConLai: conLai - soTien,
+        SoLanConLai: 2 - (soLanDaDong + 1),
       },
     };
   });
@@ -207,6 +222,7 @@ export async function searchPhieuThu({ maPhieuThu, maSV, maHK }) {
   return rows.map((r) => ({
     MaPhieuThu: r.MaPhieuThu, MaSV: r.MaSV, TenSV: r.sinhVien.TenSV,
     MaHK: r.MaHK, TenHK: r.hocKy.TenHK, NamHoc: r.hocKy.NamHoc,
-    NgayThu: r.NgayThu.toISOString(), SoTienThu: Number(r.SoTienThu), GhiChu: r.GhiChu ?? '',
+    NgayThu: r.NgayThu.toISOString(), SoTienThu: Number(r.SoTienThu),
+    HinhThucTT: r.HinhThucTT, GhiChu: r.GhiChu ?? '',
   }));
 }

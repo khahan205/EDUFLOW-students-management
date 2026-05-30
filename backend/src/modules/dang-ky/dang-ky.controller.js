@@ -26,3 +26,14 @@ export const unregisterCtrl = asyncHandler(async (req, res) => {
   await svc.unregister(input);
   res.status(204).end();
 });
+
+export const restoreCtrl = asyncHandler(async (req, res) => {
+  const input = validate(unregisterSchema, req.body);
+  res.json(await svc.restoreRegister(input));
+});
+
+export const getHuyCtrl = asyncHandler(async (req, res) => {
+  const { maHK } = req.query;
+  if (!maHK) throw ApiError.badRequest('Thiếu tham số maHK');
+  res.json(await svc.getHuyDangKy(req.params.maSV, maHK));
+});

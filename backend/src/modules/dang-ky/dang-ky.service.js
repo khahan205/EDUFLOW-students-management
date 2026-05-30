@@ -55,9 +55,9 @@ export async function getMonMoChoSV(maSV, maHK) {
     include: { monHoc: true },
   });
 
-  // Danh sách phiếu HP đã có của SV trong HK này
+  // Danh sách phiếu HP đang ACTIVE của SV trong HK này
   const phieuHocPhi = await prisma.phieuHocPhi.findMany({
-    where: { MaSV: maSV, MaHK: maHK },
+    where: { MaSV: maSV, MaHK: maHK, TrangThai: 'ACTIVE' },
     select: { MaMH: true },
   });
   const daDangKy = new Set(phieuHocPhi.map((p) => p.MaMH));
@@ -152,12 +152,25 @@ export async function register({ maSV, maHK, maMH }) {
       }
     }
 
-    // 5. Check trùng đăng ký
+    // 5. Check trùng đăng ký (kể cả record đã HUY)
     const exists = await tx.phieuHocPhi.findUnique({
       where: { MaSV_MaMH_MaHK: { MaSV: maSV, MaMH: maMH, MaHK: maHK } },
     });
     if (exists) {
-      throw ApiError.conflict(`Sinh viên đã đăng ký môn này rồi.`);
+      if (exists.TrangThai === 'ACTIVE') {
+        throw ApiError.conflict(`Sinh viên đã đăng ký môn này rồi.`);
+      }
+      // Nếu đã HUY → khôi phục lại thay vì tạo mới
+      await tx.phieuHocPhi.update({
+        where: { MaSV_MaMH_MaHK: { MaSV: maSV, MaMH: maMH, MaHK: maHK } },
+        data: { TrangThai: 'ACTIVE', NgayHuy: null },
+      });
+      await tx.monHoc.update({ where: { MaMH: maMH }, data: { SiSoHienTai: { increment: 1 } } });
+      return {
+        MaPhieu: exists.MaPhieu, MaSV: exists.MaSV, MaMH: exists.MaMH, MaHK: exists.MaHK,
+        SoTienDangKy: Number(exists.SoTienDangKy), SoTienPhaiDong: Number(exists.SoTienPhaiDong),
+        NgayLap: exists.NgayLap.toISOString(),
+      };
     }
 
     // 4. Check sĩ số
@@ -214,22 +227,14 @@ export async function unregister({ maSV, maHK, maMH }) {
     const phieu = await tx.phieuHocPhi.findUnique({
       where: { MaSV_MaMH_MaHK: { MaSV: maSV, MaMH: maMH, MaHK: maHK } },
     });
-    if (!phieu) throw ApiError.notFound('Không tìm thấy đăng ký này.');
-
-    // Check đã có phiếu thu chưa
-    const hasPayment = await tx.phieuThu.count({
-      where: { MaSV: maSV, MaHK: maHK },
-    });
-    if (hasPayment > 0) {
-      throw ApiError.conflict(
-        `Không thể huỷ vì sinh viên đã đóng tiền trong học kỳ này. ` +
-        `Liên hệ phòng tài chính để xử lý.`,
-      );
+    if (!phieu || phieu.TrangThai !== 'ACTIVE') {
+      throw ApiError.notFound('Không tìm thấy đăng ký này.');
     }
 
-    // Xoá phiếu + giảm sĩ số
-    await tx.phieuHocPhi.delete({
+    // Soft delete — giữ record, đánh dấu HUY + giảm sĩ số
+    await tx.phieuHocPhi.update({
       where: { MaSV_MaMH_MaHK: { MaSV: maSV, MaMH: maMH, MaHK: maHK } },
+      data: { TrangThai: 'HUY', NgayHuy: new Date() },
     });
 
     await tx.monHoc.update({
@@ -237,4 +242,52 @@ export async function unregister({ maSV, maHK, maMH }) {
       data: { SiSoHienTai: { decrement: 1 } },
     });
   });
+}
+
+/**
+ * Khôi phục đăng ký đã huỷ (soft delete restore).
+ */
+export async function restoreRegister({ maSV, maHK, maMH }) {
+  return prisma.$transaction(async (tx) => {
+    const phieu = await tx.phieuHocPhi.findUnique({
+      where: { MaSV_MaMH_MaHK: { MaSV: maSV, MaMH: maMH, MaHK: maHK } },
+    });
+    if (!phieu || phieu.TrangThai !== 'HUY') {
+      throw ApiError.notFound('Không tìm thấy đăng ký đã huỷ.');
+    }
+
+    // Check sĩ số còn chỗ không
+    const mh = await tx.monHoc.findUnique({ where: { MaMH: maMH } });
+    if (mh && mh.SiSoHienTai >= mh.SiSoToiDa) {
+      throw ApiError.conflict(`Môn "${maMH}" đã đầy, không thể khôi phục.`);
+    }
+
+    await tx.phieuHocPhi.update({
+      where: { MaSV_MaMH_MaHK: { MaSV: maSV, MaMH: maMH, MaHK: maHK } },
+      data: { TrangThai: 'ACTIVE', NgayHuy: null },
+    });
+
+    await tx.monHoc.update({
+      where: { MaMH: maMH },
+      data: { SiSoHienTai: { increment: 1 } },
+    });
+
+    return { restored: true, MaPhieu: phieu.MaPhieu };
+  });
+}
+
+/**
+ * Lấy danh sách đăng ký đã huỷ của 1 SV trong 1 HK.
+ */
+export async function getHuyDangKy(maSV, maHK) {
+  const rows = await prisma.phieuHocPhi.findMany({
+    where: { MaSV: maSV, MaHK: maHK, TrangThai: 'HUY' },
+    include: { monHoc: { select: { TenMH: true, SoTinChi: true } } },
+    orderBy: { NgayHuy: 'desc' },
+  });
+  return rows.map((r) => ({
+    MaPhieu: r.MaPhieu, MaMH: r.MaMH, TenMH: r.monHoc.TenMH,
+    SoTinChi: r.monHoc.SoTinChi, NgayHuy: r.NgayHuy?.toISOString() ?? null,
+    SoTienPhaiDong: Number(r.SoTienPhaiDong),
+  }));
 }

@@ -390,11 +390,48 @@ async function main() {
     { TenThamSo: 'ti_le_mien_giam_top_dau',     GiaTri: '0.5',    KieuDuLieu: 'number', MoTa: 'Tỉ lệ miễn giảm học lực xuất sắc' },
     { TenThamSo: 'ti_le_mien_giam_vung_sau_xa', GiaTri: '0.3',    KieuDuLieu: 'number', MoTa: 'Tỉ lệ miễn giảm vùng sâu vùng xa' },
     { TenThamSo: 'si_so_toi_da_mac_dinh',       GiaTri: '50',     KieuDuLieu: 'number', MoTa: 'Sĩ số tối đa mặc định' },
+    { TenThamSo: 'ngan_hang_ten',               GiaTri: 'Vietcombank', KieuDuLieu: 'string', MoTa: 'Tên ngân hàng nhận học phí' },
+    { TenThamSo: 'ngan_hang_ma_vietqr',         GiaTri: 'VCB',    KieuDuLieu: 'string', MoTa: 'Mã ngân hàng VietQR (VCB, TCB, VTB...)' },
+    { TenThamSo: 'ngan_hang_so_tk',             GiaTri: '1234567890', KieuDuLieu: 'string', MoTa: 'Số tài khoản nhận học phí' },
+    { TenThamSo: 'ngan_hang_chu_tk',            GiaTri: 'TRUONG DAI HOC CONG NGHE THONG TIN', KieuDuLieu: 'string', MoTa: 'Chủ tài khoản' },
+    { TenThamSo: 'chuyen_khoan_so_tien_toi_thieu', GiaTri: '1000', KieuDuLieu: 'number', MoTa: 'Số tiền tối thiểu khi chuyển khoản (đ)' },
   ];
   for (const ts of thamSos) {
     await prisma.thamSo.upsert({ where: { TenThamSo: ts.TenThamSo }, update: { GiaTri: ts.GiaTri }, create: ts });
   }
   console.log('  ✓ 6 tham số\n');
+
+  // ── 12. ĐƠN GIA HẠN HỌC PHÍ ─────────────────────────────────────────────────
+  console.log('📋 Đơn gia hạn học phí...');
+  const donGiaHanData = [
+    {
+      MaSV: '22521007', MaHK: HK1,
+      LyDo: 'Gia đình em đang gặp khó khăn về tài chính do bố em vừa bị tai nạn lao động. Em kính xin nhà trường xem xét cho em gia hạn nộp học phí thêm 30 ngày để gia đình thu xếp.',
+      TrangThai: 'CHO_DUYET',
+    },
+    {
+      MaSV: '22522008', MaHK: HK1,
+      LyDo: 'Em thuộc diện hộ nghèo vùng sâu vùng xa. Vụ mùa năm nay mất mùa nên gia đình chưa đủ điều kiện đóng học phí đúng hạn. Em xin gia hạn thêm 45 ngày.',
+      TrangThai: 'CHO_DUYET',
+    },
+    {
+      MaSV: '22523005', MaHK: HK1,
+      LyDo: 'Em vừa trải qua phẫu thuật và phải nằm viện 3 tuần, ảnh hưởng đến việc đi làm thêm. Nay sức khỏe đã ổn định, em xin nhà trường cho gia hạn thêm 1 tháng.',
+      TrangThai: 'CHO_DUYET',
+    },
+    {
+      MaSV: '22521003', MaHK: HK1,
+      LyDo: 'Em đã nộp đơn xin học bổng doanh nghiệp, dự kiến kết quả vào cuối tháng tới. Em xin gia hạn để chờ kết quả trước khi thanh toán.',
+      TrangThai: 'DA_DUYET',
+      NgayXuLy: new Date('2024-09-05'),
+      NgayGiaHan: new Date('2024-10-31'),
+      GhiChuAdmin: 'Đã xem xét hồ sơ, chấp thuận gia hạn đến ngày 31/10/2024.',
+    },
+  ];
+  for (const don of donGiaHanData) {
+    await prisma.donGiaHan.create({ data: don });
+  }
+  console.log(`  ✓ ${donGiaHanData.length} đơn gia hạn (3 chờ duyệt, 1 đã duyệt)\n`);
 
   // ── TỔNG KẾT ─────────────────────────────────────────────────────────────────
   console.log('✅ Seed hoàn tất!\n');

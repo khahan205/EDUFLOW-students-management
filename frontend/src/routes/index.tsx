@@ -86,7 +86,7 @@ export const router = createBrowserRouter([
             ],
           },
           {
-            element: <ProtectedRoute allowedRoles={['admin', 'phong-tai-chinh']} />,
+            element: <ProtectedRoute allowedRoles={['admin', 'phong-tai-chinh', 'phong-dao-tao']} />,
             children: [
               { path: ROUTES.HOC_PHI, element: <HocPhiPage /> },
             ],
