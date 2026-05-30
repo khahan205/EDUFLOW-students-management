@@ -188,10 +188,21 @@ async function main() {
     { MaDoiTuong: 'DT_VUNGSAUVUNGXA',   TenDoiTuong: 'Vùng sâu vùng xa',      TiLeGiamHocPhi: 0.3 },
   ]});
 
+  await prisma.khoa.createMany({ skipDuplicates: true, data: [
+    { MaKhoa: 'KHOA_CNTT',     TenKhoa: 'Khoa Công nghệ Thông tin'           },
+    { MaKhoa: 'KHOA_KHCB',     TenKhoa: 'Khoa Khoa học Cơ bản'               },
+    { MaKhoa: 'KHOA_NGOAINGU', TenKhoa: 'Khoa Ngoại ngữ'                      },
+    { MaKhoa: 'KHOA_KTHT',     TenKhoa: 'Khoa Kỹ thuật Hệ thống'             },
+  ]});
+
   await prisma.nganhHoc.createMany({ skipDuplicates: true, data: [
-    { MaNganh: 'NG_CNTT', TenNganh: 'Công nghệ Thông tin',  MaKhoa: 'KHOA_CNTT' },
-    { MaNganh: 'NG_KTMT', TenNganh: 'Khoa học Máy tính',    MaKhoa: 'KHOA_CNTT' },
-    { MaNganh: 'NG_HTTT', TenNganh: 'Hệ thống Thông tin',   MaKhoa: 'KHOA_CNTT' },
+    { MaNganh: 'NG_CNTT', TenNganh: 'Công nghệ Thông tin',           MaKhoa: 'KHOA_CNTT' },
+    { MaNganh: 'NG_KTMT', TenNganh: 'Khoa học Máy tính',             MaKhoa: 'KHOA_CNTT' },
+    { MaNganh: 'NG_HTTT', TenNganh: 'Hệ thống Thông tin',            MaKhoa: 'KHOA_CNTT' },
+    { MaNganh: 'NG_KTPM', TenNganh: 'Kỹ thuật Phần mềm',             MaKhoa: 'KHOA_CNTT' },
+    { MaNganh: 'NG_MMTT', TenNganh: 'Mạng máy tính và Truyền thông', MaKhoa: 'KHOA_CNTT' },
+    { MaNganh: 'NG_KHDL', TenNganh: 'Khoa học Dữ liệu',              MaKhoa: 'KHOA_CNTT' },
+    { MaNganh: 'NG_ATTT', TenNganh: 'An toàn Thông tin',             MaKhoa: 'KHOA_CNTT' },
   ]});
 
   await prisma.loaiMon.createMany({ skipDuplicates: true, data: [

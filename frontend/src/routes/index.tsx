@@ -26,6 +26,8 @@ import { MonHocMoPage } from '@/features/mon-hoc-mo/pages/MonHocMoPage';
 import { GiangVienPage } from '@/features/giang-vien/pages/GiangVienPage';
 import { GiangVienProfilePage } from '@/features/giang-vien/pages/GiangVienProfilePage';
 import { GiangVienListPage } from '@/features/giang-vien/pages/GiangVienListPage';
+import { NganhHocPage } from '@/features/nganh-hoc/pages/NganhHocPage';
+import { KhoaPage } from '@/features/khoa/pages/KhoaPage';
 import { ChuongTrinhHocPage } from '@/features/chuong-trinh-hoc/pages/ChuongTrinhHocPage';
 
 export const router = createBrowserRouter([
@@ -74,6 +76,8 @@ export const router = createBrowserRouter([
               { path: ROUTES.MON_HOC_MO, element: <MonHocMoPage /> },
               { path: ROUTES.GIANG_VIEN_LIST, element: <GiangVienListPage /> },
               { path: ROUTES.CHUONG_TRINH_HOC, element: <ChuongTrinhHocPage /> },
+              { path: ROUTES.NGANH_HOC, element: <NganhHocPage /> },
+              { path: ROUTES.KHOA, element: <KhoaPage /> },
               { path: ROUTES.DANG_KY, element: <Navigate to={ROUTES.SINH_VIEN} replace /> },
               { path: ROUTES.PHAN_CONG, element: <Navigate to={ROUTES.MON_HOC_MO} replace /> },
             ],

@@ -7,12 +7,16 @@ import {
   IconSearch,
   IconChalkboard,
   IconCalendar,
+  IconPlus,
 } from '@tabler/icons-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
@@ -41,6 +45,127 @@ interface GiangVienRow {
   Username: string;
   profile: GVProfile | null;
   stats?: GVStats;
+}
+
+/* ── Dialog: Thêm giảng viên mới ── */
+const EMPTY_GV = { username: '', password: '', hoTen: '', email: '', khoa: '', boMon: '', hocVi: '', hocHam: '', namCongTac: '' };
+
+function AddTeacherDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
+  const qc = useQueryClient();
+  const [form, setForm] = useState({ ...EMPTY_GV });
+  const [showPass, setShowPass] = useState(false);
+
+  const set = (k: keyof typeof EMPTY_GV) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const mutation = useMutation({
+    mutationFn: () => apiClient.post('/giang-vien', {
+      username: form.username.trim(),
+      password: form.password,
+      hoTen: form.hoTen.trim(),
+      email: form.email.trim() || null,
+      khoa: form.khoa.trim() || null,
+      boMon: form.boMon.trim() || null,
+      hocVi: form.hocVi.trim() || null,
+      hocHam: form.hocHam.trim() || null,
+      namCongTac: form.namCongTac ? Number(form.namCongTac) : null,
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['giang-vien-list'] });
+      qc.invalidateQueries({ queryKey: ['giang-vien-accounts'] });
+      toast.success('Đã thêm giảng viên mới');
+      onOpenChange(false);
+      setForm({ ...EMPTY_GV });
+    },
+    onError: (err: { message?: string }) => toast.error(err.message ?? 'Có lỗi xảy ra'),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="flex max-h-[90vh] w-full max-w-lg flex-col gap-0 overflow-hidden p-0">
+        <DialogHeader className="border-b px-6 py-4">
+          <DialogTitle>Thêm giảng viên mới</DialogTitle>
+          <p className="text-xs text-slate-500 mt-0.5">Tạo tài khoản đăng nhập và hồ sơ cơ bản</p>
+        </DialogHeader>
+
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+          {/* Thông tin tài khoản */}
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Tài khoản đăng nhập</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label>Tên đăng nhập <span className="text-red-500">*</span></Label>
+                <Input placeholder="VD: gv_nguyen" value={form.username} onChange={set('username')} autoFocus />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Mật khẩu <span className="text-red-500">*</span></Label>
+                <div className="relative">
+                  <Input
+                    type={showPass ? 'text' : 'password'}
+                    placeholder="Tối thiểu 6 ký tự"
+                    value={form.password}
+                    onChange={set('password')}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPass((s) => !s)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600"
+                  >
+                    {showPass ? 'Ẩn' : 'Hiện'}
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Họ và tên <span className="text-red-500">*</span></Label>
+                <Input placeholder="VD: Nguyễn Văn A" value={form.hoTen} onChange={set('hoTen')} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Email</Label>
+                <Input type="email" placeholder="VD: gv@gmail.com" value={form.email} onChange={set('email')} />
+              </div>
+            </div>
+          </div>
+
+          {/* Hồ sơ */}
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Hồ sơ giảng viên (không bắt buộc)</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label>Khoa quản lý</Label>
+                <Input placeholder="VD: Khoa CNTT" value={form.khoa} onChange={set('khoa')} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Bộ môn</Label>
+                <Input placeholder="VD: BM Hệ thống TT" value={form.boMon} onChange={set('boMon')} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Học vị</Label>
+                <Input placeholder="VD: Tiến sĩ, Thạc sĩ" value={form.hocVi} onChange={set('hocVi')} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Học hàm</Label>
+                <Input placeholder="VD: Giảng viên, Phó GS" value={form.hocHam} onChange={set('hocHam')} />
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label>Năm bắt đầu công tác</Label>
+                <Input type="number" min={1970} max={new Date().getFullYear()} placeholder="VD: 2015" value={form.namCongTac} onChange={set('namCongTac')} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 border-t px-6 py-4">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Huỷ</Button>
+          <Button
+            disabled={!form.username || !form.password || !form.hoTen || mutation.isPending}
+            onClick={() => mutation.mutate()}
+          >
+            {mutation.isPending ? 'Đang tạo...' : 'Tạo tài khoản'}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 /* ── Print template ── */
@@ -254,6 +379,7 @@ export function GiangVienListPage() {
   const [page, setPage] = useState(1);
   const [pageSize] = useState(15);
   const [selected, setSelected] = useState<GiangVienRow | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
 
   const query = useQuery({
     queryKey: ['giang-vien-list'],
@@ -286,6 +412,12 @@ export function GiangVienListPage() {
         title="Danh sách giảng viên"
         icon={<IconUsers className="h-4 w-4" />}
         iconTone="teal"
+        actions={
+          <Button onClick={() => setAddOpen(true)}>
+            <IconPlus className="h-4 w-4" />
+            Thêm giảng viên
+          </Button>
+        }
       />
 
       <Card>
@@ -385,6 +517,7 @@ export function GiangVienListPage() {
       </Card>
 
       <ProfileDialog gv={selected} onClose={() => setSelected(null)} />
+      <AddTeacherDialog open={addOpen} onOpenChange={setAddOpen} />
     </>
   );
 }

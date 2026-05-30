@@ -109,6 +109,13 @@ model DoiTuongUuTien {
   @@map("DOITUONGUUTIEN")
 }
 
+model Khoa {
+  MaKhoa  String  @id @db.VarChar(20)
+  TenKhoa String  @db.VarChar(150)
+
+  @@map("KHOA")
+}
+
 model NganhHoc {
   MaNganh    String     @id @db.VarChar(20)
   TenNganh   String     @db.VarChar(100)

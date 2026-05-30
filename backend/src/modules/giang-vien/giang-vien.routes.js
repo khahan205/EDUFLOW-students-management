@@ -4,6 +4,7 @@ import { requireRole } from '../../middlewares/require-role.js';
 import { prisma } from '../../config/prisma.js';
 import { asyncHandler } from '../../utils/async-handler.js';
 import { ApiError } from '../../utils/api-error.js';
+import { hashPassword } from '../../utils/hash.js';
 
 const router = Router();
 router.use(authenticate);
@@ -28,6 +29,48 @@ async function buildGVResponse(tk) {
     stats: { soLop, tongSinhVien },
   };
 }
+
+/* ── Admin / PDT: tạo tài khoản giảng viên mới ── */
+router.post(
+  '/',
+  canView,
+  asyncHandler(async (req, res) => {
+    const { username, password, hoTen, email, khoa, boMon, hocVi, hocHam, namCongTac, ngaySinh, quaTrinhCT } = req.body;
+    if (!username || !password || !hoTen) {
+      throw ApiError.badRequest('Thiếu username, mật khẩu hoặc họ tên.');
+    }
+
+    const exists = await prisma.taiKhoan.findUnique({ where: { Username: username } });
+    if (exists) throw ApiError.conflict(`Username "${username}" đã tồn tại.`);
+
+    const emailExists = email && await prisma.taiKhoan.findFirst({ where: { Email: email } });
+    if (emailExists) throw ApiError.conflict(`Email "${email}" đã được dùng.`);
+
+    const hash = await hashPassword(password);
+
+    const tk = await prisma.taiKhoan.create({
+      data: { Username: username, PasswordHash: hash, HoTen: hoTen, Email: email ?? null, VaiTro: 'GIANG_VIEN' },
+    });
+
+    const hasProfile = khoa || boMon || hocVi || hocHam || namCongTac || ngaySinh || quaTrinhCT;
+    if (hasProfile) {
+      await prisma.giangVienProfile.create({
+        data: {
+          MaTK: tk.MaTK,
+          NgaySinh: ngaySinh ? new Date(ngaySinh) : null,
+          Khoa: khoa ?? null,
+          BoMon: boMon ?? null,
+          HocVi: hocVi ?? null,
+          HocHam: hocHam ?? null,
+          NamCongTac: namCongTac ? Number(namCongTac) : null,
+          QuaTrinhCT: quaTrinhCT ?? null,
+        },
+      });
+    }
+
+    res.status(201).json({ MaTK: tk.MaTK, Username: tk.Username, HoTen: tk.HoTen });
+  }),
+);
 
 /* ── Admin / PDT: danh sách tất cả giảng viên ── */
 router.get(
