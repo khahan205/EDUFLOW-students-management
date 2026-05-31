@@ -16,6 +16,7 @@ import {
   fetchEnrollmentStats,
   fetchRevenueTrend,
 } from '../api/bao-cao-api';
+import { fetchRevenueBySemester } from '@/features/dashboard/api/dashboard-api';
 import { PaymentStatusChart } from '../components/PaymentStatusChart';
 import { EnrollmentStats } from '../components/EnrollmentStats';
 import { RevenueTrend } from '../components/RevenueTrend';
@@ -34,6 +35,12 @@ export function BaoCaoPage() {
   const printRef = useRef<HTMLDivElement>(null);
   const handlePrint = useReactToPrint({ contentRef: printRef });
   const [filterHK, setFilterHK] = useState('');
+  const [filterBM13HK, setFilterBM13HK] = useState('');
+
+  const revenueByHKQuery = useQuery({
+    queryKey: ['revenue-by-semester'],
+    queryFn: fetchRevenueBySemester,
+  });
 
   const paymentQuery = useQuery({ queryKey: ['bao-cao', 'payment-status'], queryFn: fetchPaymentStatusBreakdown });
   const enrollmentQuery = useQuery({ queryKey: ['bao-cao', 'enrollment'], queryFn: fetchEnrollmentStats });
@@ -140,6 +147,97 @@ export function BaoCaoPage() {
         </div>
         {trendQuery.data && <RevenueTrend data={trendQuery.data} />}
       </div>
+
+      {/* BM13.1 — Báo cáo tổng kết doanh thu học kỳ */}
+      <Card className="mt-5">
+        <CardHeader>
+          <div className="flex items-center justify-between gap-4">
+            <CardTitle className="text-sm">BM13.1 — Báo cáo tổng kết doanh thu học kỳ</CardTitle>
+            <div className="flex items-center gap-2">
+              <Select value={filterBM13HK || 'all'} onValueChange={(v) => setFilterBM13HK(v === 'all' ? '' : v)}>
+                <SelectTrigger className="w-52">
+                  <SelectValue placeholder="Tất cả học kỳ" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả học kỳ</SelectItem>
+                  {(revenueByHKQuery.data ?? []).map((r) => (
+                    <SelectItem key={`${r.NamHoc}-${r.HocKy}`} value={`${r.NamHoc}|${r.HocKy}`}>
+                      {r.HocKy} {r.NamHoc}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button variant="outline" size="sm" onClick={() => {
+                const rows = filterBM13HK
+                  ? (revenueByHKQuery.data ?? []).filter(r => `${r.NamHoc}|${r.HocKy}` === filterBM13HK)
+                  : (revenueByHKQuery.data ?? []);
+                exportToExcel(rows.map(r => ({ ...r, ConLai: r.Tong - r.DaThu })), [
+                  { header: 'Năm học', key: 'NamHoc' },
+                  { header: 'Học kỳ', key: 'HocKy' },
+                  { header: 'Số tiền dự kiến thu (đ)', key: 'Tong' },
+                  { header: 'Số tiền đã thu (đ)', key: 'DaThu' },
+                  { header: 'Số tiền còn nợ (đ)', key: 'ConLai' },
+                  { header: 'Số sinh viên', key: 'SoSinhVien' },
+                ], 'BM13.1-doanh-thu-hoc-ky');
+              }} disabled={!revenueByHKQuery.data?.length}>
+                <IconFileSpreadsheet className="h-4 w-4" />
+                Xuất Excel
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {revenueByHKQuery.isLoading && <div className="m-4 h-24 animate-pulse rounded-lg bg-slate-100" />}
+          {!revenueByHKQuery.isLoading && (() => {
+            const rows = filterBM13HK
+              ? (revenueByHKQuery.data ?? []).filter(r => `${r.NamHoc}|${r.HocKy}` === filterBM13HK)
+              : (revenueByHKQuery.data ?? []);
+            return rows.length === 0 ? (
+              <p className="py-6 text-center text-sm text-slate-400">Không có dữ liệu</p>
+            ) : (
+              <>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Năm học</TableHead>
+                      <TableHead>Học kỳ</TableHead>
+                      <TableHead className="text-right">Số tiền dự kiến thu</TableHead>
+                      <TableHead className="text-right">Số tiền đã thu</TableHead>
+                      <TableHead className="text-right text-red-600">Số tiền còn nợ</TableHead>
+                      <TableHead className="text-center">Số SV</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {rows.map((r) => {
+                      const conLai = r.Tong - r.DaThu;
+                      return (
+                        <TableRow key={`${r.NamHoc}-${r.HocKy}`}>
+                          <TableCell>{r.NamHoc}</TableCell>
+                          <TableCell className="font-medium">{r.HocKy}</TableCell>
+                          <TableCell className="text-right font-mono">{fmt(r.Tong)}</TableCell>
+                          <TableCell className="text-right font-mono font-semibold text-emerald-600">{fmt(r.DaThu)}</TableCell>
+                          <TableCell className={`text-right font-mono font-semibold ${conLai > 0 ? 'text-red-600' : 'text-slate-400'}`}>
+                            {conLai > 0 ? fmt(conLai) : '—'}
+                          </TableCell>
+                          <TableCell className="text-center">{r.SoSinhVien}</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+                {filterBM13HK && rows[0] && (
+                  <div className="border-t bg-slate-50 px-6 py-4 text-sm space-y-1">
+                    <p><span className="font-medium">Học kỳ:</span> {rows[0].HocKy} &nbsp;|&nbsp; <span className="font-medium">Năm học:</span> {rows[0].NamHoc}</p>
+                    <p><span className="font-medium">Số tiền dự kiến thu:</span> <span className="font-mono">{fmt(rows[0].Tong)}</span></p>
+                    <p><span className="font-medium">Số tiền đã thu:</span> <span className="font-mono text-emerald-600">{fmt(rows[0].DaThu)}</span></p>
+                    <p><span className="font-medium">Số tiền còn nợ:</span> <span className={`font-mono font-semibold ${rows[0].Tong - rows[0].DaThu > 0 ? 'text-red-600' : 'text-slate-400'}`}>{rows[0].Tong - rows[0].DaThu > 0 ? fmt(rows[0].Tong - rows[0].DaThu) : '—'}</span></p>
+                  </div>
+                )}
+              </>
+            );
+          })()}
+        </CardContent>
+      </Card>
 
       {/* BM13.2 — Danh sách sinh viên chưa đóng học phí */}
       <Card className="mt-5">

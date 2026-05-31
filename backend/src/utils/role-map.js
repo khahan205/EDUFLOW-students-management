@@ -8,6 +8,7 @@ const DB_TO_SLUG = {
   PHONG_TAI_CHINH: 'phong-tai-chinh',
   GIANG_VIEN: 'giang-vien',
   CO_VAN: 'co-van',
+  SINH_VIEN: 'sinh-vien',
 };
 
 const SLUG_TO_DB = Object.fromEntries(

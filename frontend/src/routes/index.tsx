@@ -9,6 +9,7 @@ import { useAuthStore } from '@/stores/auth-store';
 function RootRedirect() {
   const role = useAuthStore((s) => s.user?.role);
   if (role === 'giang-vien') return <Navigate to={ROUTES.GIANG_VIEN_PROFILE} replace />;
+  if (role === 'sinh-vien') return <Navigate to={ROUTES.STUDENT_HO_SO} replace />;
   return <Navigate to={ROUTES.DASHBOARD} replace />;
 }
 
@@ -27,7 +28,18 @@ import { GiangVienPage } from '@/features/giang-vien/pages/GiangVienPage';
 import { GiangVienProfilePage } from '@/features/giang-vien/pages/GiangVienProfilePage';
 import { GiangVienListPage } from '@/features/giang-vien/pages/GiangVienListPage';
 import { NganhHocPage } from '@/features/nganh-hoc/pages/NganhHocPage';
-import { KhoaPage } from '@/features/khoa/pages/KhoaPage';
+import { KhoaNganhPage } from '@/features/khoa/pages/KhoaNganhPage';
+import { HuyenPage } from '@/features/danh-muc/pages/HuyenPage';
+import { HocKyPage } from '@/features/hoc-ky/pages/HocKyPage';
+import {
+  StudentHoSoPage,
+  StudentDangKyPage,
+  StudentPhieuPage,
+  StudentDiemPage,
+  StudentHocPhiPage,
+} from '@/features/student/pages/StudentPortalPage';
+import { QueQuanPage } from '@/features/danh-muc/pages/QueQuanPage';
+import { DoiTuongPage } from '@/features/danh-muc/pages/DoiTuongPage';
 import { ChuongTrinhHocPage } from '@/features/chuong-trinh-hoc/pages/ChuongTrinhHocPage';
 
 export const router = createBrowserRouter([
@@ -67,7 +79,7 @@ export const router = createBrowserRouter([
       {
         element: <AppLayout />,
         children: [
-          { path: ROUTES.DASHBOARD, element: <ProtectedRoute allowedRoles={['admin','phong-dao-tao','phong-tai-chinh','co-van']} redirectTo={ROUTES.GIANG_VIEN_PROFILE}><DashboardPage /></ProtectedRoute> },
+          { path: ROUTES.DASHBOARD, element: <ProtectedRoute allowedRoles={['admin','phong-dao-tao','phong-tai-chinh','co-van']} redirectTo={ROUTES.STUDENT_HO_SO}><DashboardPage /></ProtectedRoute> },
           {
             element: <ProtectedRoute allowedRoles={['admin', 'phong-dao-tao']} />,
             children: [
@@ -77,7 +89,11 @@ export const router = createBrowserRouter([
               { path: ROUTES.GIANG_VIEN_LIST, element: <GiangVienListPage /> },
               { path: ROUTES.CHUONG_TRINH_HOC, element: <ChuongTrinhHocPage /> },
               { path: ROUTES.NGANH_HOC, element: <NganhHocPage /> },
-              { path: ROUTES.KHOA, element: <KhoaPage /> },
+              { path: ROUTES.KHOA, element: <KhoaNganhPage /> },
+              { path: ROUTES.HOC_KY, element: <HocKyPage /> },
+              { path: ROUTES.HUYEN, element: <HuyenPage /> },
+              { path: ROUTES.QUE_QUAN, element: <QueQuanPage /> },
+              { path: ROUTES.DOI_TUONG, element: <DoiTuongPage /> },
               { path: ROUTES.DANG_KY, element: <Navigate to={ROUTES.SINH_VIEN} replace /> },
               { path: ROUTES.PHAN_CONG, element: <Navigate to={ROUTES.MON_HOC_MO} replace /> },
             ],
@@ -87,6 +103,17 @@ export const router = createBrowserRouter([
             children: [
               { path: ROUTES.GIANG_VIEN, element: <GiangVienPage /> },
               { path: ROUTES.GIANG_VIEN_PROFILE, element: <GiangVienProfilePage /> },
+            ],
+          },
+          {
+            element: <ProtectedRoute allowedRoles={['sinh-vien']} redirectTo={ROUTES.STUDENT_HO_SO} />,
+            children: [
+              { path: ROUTES.STUDENT_PORTAL, element: <Navigate to={ROUTES.STUDENT_HO_SO} replace /> },
+              { path: ROUTES.STUDENT_HO_SO,   element: <StudentHoSoPage /> },
+              { path: ROUTES.STUDENT_DANG_KY, element: <StudentDangKyPage /> },
+              { path: ROUTES.STUDENT_PHIEU,   element: <StudentPhieuPage /> },
+              { path: ROUTES.STUDENT_DIEM,    element: <StudentDiemPage /> },
+              { path: ROUTES.STUDENT_HOC_PHI, element: <StudentHocPhiPage /> },
             ],
           },
           {

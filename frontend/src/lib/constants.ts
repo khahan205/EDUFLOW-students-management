@@ -29,7 +29,17 @@ export const ROUTES = {
   GIANG_VIEN_LIST: '/danh-sach-giang-vien',
   CHUONG_TRINH_HOC: '/chuong-trinh-hoc',
   NGANH_HOC: '/nganh-hoc',
-  KHOA: '/khoa',
+  KHOA: '/khoa-nganh',
+  STUDENT_PORTAL: '/student',
+  STUDENT_HO_SO: '/student/ho-so',
+  STUDENT_DANG_KY: '/student/dang-ky-mon',
+  STUDENT_PHIEU: '/student/phieu-dang-ky',
+  STUDENT_DIEM: '/student/bang-diem',
+  STUDENT_HOC_PHI: '/student/hoc-phi',
+  HOC_KY: '/hoc-ky',
+  HUYEN: '/huyen',
+  QUE_QUAN: '/que-quan',
+  DOI_TUONG: '/doi-tuong',
   PHAN_CONG: '/phan-cong',
 } as const;
 

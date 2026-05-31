@@ -39,7 +39,15 @@ import {
   restoreMon,
 } from '@/features/dang-ky/api/dang-ky-api';
 import { useAuthStore } from '@/stores/auth-store';
+import { apiClient } from '@/services/api-client';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { HuyenPage } from '@/features/danh-muc/pages/HuyenPage';
 import type { SinhVien } from '@/types';
+
+interface QueQuanFull { MaQueQuan: string; TenTinh: string; huyen?: { TenHuyen: string; LaVungSauVungXa: boolean } }
+interface DoiTuong { MaDoiTuong: string; TenDoiTuong: string; TiLeGiamHocPhi: number }
+interface NganhHoc { MaNganh: string; TenNganh: string }
 
 function SinhVienDetailSheet({
   sv,
@@ -58,6 +66,15 @@ function SinhVienDetailSheet({
     enabled: !!sv,
     staleTime: 5 * 60 * 1000,
   });
+
+  // Lookup tables để hiện tên đầy đủ
+  const qqQuery = useQuery({ queryKey: ['que-quan'], staleTime: 300_000, queryFn: async () => { const { data } = await apiClient.get<QueQuanFull[]>('/que-quan'); return data; }, enabled: !!sv });
+  const dtQuery = useQuery({ queryKey: ['doi-tuong'], staleTime: 300_000, queryFn: async () => { const { data } = await apiClient.get<DoiTuong[]>('/doi-tuong'); return data; }, enabled: !!sv });
+  const nganhQuery = useQuery({ queryKey: ['nganh-hoc'], staleTime: 300_000, queryFn: async () => { const { data } = await apiClient.get<NganhHoc[]>('/nganh-hoc'); return data; }, enabled: !!sv });
+
+  const qqMap = Object.fromEntries((qqQuery.data ?? []).map(q => [q.MaQueQuan, q]));
+  const dtMap = Object.fromEntries((dtQuery.data ?? []).map(d => [d.MaDoiTuong, d]));
+  const nganhMap = Object.fromEntries((nganhQuery.data ?? []).map(n => [n.MaNganh, n]));
 
   const monQuery = useQuery({
     queryKey: ['mon-mo-cho-sv', sv?.MaSV, hkQuery.data?.MaHK],
@@ -143,25 +160,42 @@ function SinhVienDetailSheet({
 
               {/* Info grid */}
               <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 rounded-xl bg-slate-50 px-5 py-4 text-sm">
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Email</p>
-                  <p className="mt-0.5 text-slate-700">{sv.Email ?? '—'}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Ngày sinh</p>
-                  <p className="mt-0.5 text-slate-700">
-                    {sv.NgaySinh ? new Date(sv.NgaySinh).toLocaleDateString('vi-VN') : '—'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Giới tính</p>
-                  <p className="mt-0.5 text-slate-700">{sv.GioiTinh ?? '—'}</p>
-                </div>
+                {[
+                  { label: 'Email', value: sv.Email ?? '—' },
+                  { label: 'Ngày sinh', value: sv.NgaySinh ? new Date(sv.NgaySinh).toLocaleDateString('vi-VN') : '—' },
+                  { label: 'Giới tính', value: sv.GioiTinh ?? '—' },
+                  { label: 'Ngành học', value: sv.MaNganh ? (nganhMap[sv.MaNganh]?.TenNganh ?? sv.MaNganh) : '—' },
+                ].map(({ label, value }) => (
+                  <div key={label}>
+                    <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</p>
+                    <p className="mt-0.5 text-slate-700">{value}</p>
+                  </div>
+                ))}
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Trạng thái</p>
-                  <div className="mt-1">
-                    <StatusBadge status={sv.TrangThai ?? 'Đang học'} />
-                  </div>
+                  <div className="mt-1"><StatusBadge status={sv.TrangThai ?? 'Đang học'} /></div>
+                </div>
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Đối tượng ưu tiên</p>
+                  <p className="mt-0.5 text-slate-700">
+                    {sv.MaDoiTuong ? (dtMap[sv.MaDoiTuong]?.TenDoiTuong ?? sv.MaDoiTuong) : '—'}
+                    {sv.MaDoiTuong && dtMap[sv.MaDoiTuong]?.TiLeGiamHocPhi > 0 && (
+                      <span className="ml-1.5 rounded-full bg-teal-100 px-1.5 py-0.5 text-xs text-teal-700">
+                        Giảm {(Number(dtMap[sv.MaDoiTuong].TiLeGiamHocPhi) * 100).toFixed(0)}%
+                      </span>
+                    )}
+                  </p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Quê quán</p>
+                  <p className="mt-0.5 text-slate-700">
+                    {sv.MaQueQuan && qqMap[sv.MaQueQuan]
+                      ? `${qqMap[sv.MaQueQuan].TenTinh}${qqMap[sv.MaQueQuan].huyen ? ` — ${qqMap[sv.MaQueQuan].huyen!.TenHuyen}` : ''}`
+                      : (sv.MaQueQuan ?? '—')}
+                    {sv.MaQueQuan && qqMap[sv.MaQueQuan]?.huyen?.LaVungSauVungXa && (
+                      <span className="ml-1.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-xs text-amber-700">Vùng sâu vùng xa</span>
+                    )}
+                  </p>
                 </div>
                 {hkQuery.data && (
                   <div className="col-span-2">
@@ -366,6 +400,104 @@ function SinhVienDetailSheet({
   );
 }
 
+function MienGiamTab() {
+  const [filterHK, setFilterHK] = useState('');
+  const [filterNamHoc, setFilterNamHoc] = useState('');
+  interface HKOption { MaHK: string; TenHK: string; NamHoc: string; }
+  interface MienGiamRow { MaSV: string; TenSV: string; TenLop: string | null; TenNganh: string | null; TenDoiTuong: string; IsVungSau: boolean; PhanTramGiam: string; SoTienGoc: number | null; SoTienPhaiDong: number | null; TietKiem: number | null; }
+
+  const hkQuery = useQuery({ queryKey: ['hoc-ky-list'], staleTime: 300_000, queryFn: async () => { const { data } = await apiClient.get<HKOption[]>('/master-data/hoc-ky'); return data; } });
+
+  const namHocList = useMemo(() => {
+    const set = new Set((hkQuery.data ?? []).map(h => h.NamHoc));
+    return Array.from(set).sort().reverse();
+  }, [hkQuery.data]);
+
+  const filteredHK = useMemo(() =>
+    (hkQuery.data ?? []).filter(h => !filterNamHoc || h.NamHoc === filterNamHoc),
+    [hkQuery.data, filterNamHoc]
+  );
+
+  const query = useQuery({
+    queryKey: ['mien-giam', filterHK],
+    queryFn: async () => { const { data } = await apiClient.get<MienGiamRow[]>('/sinh-vien/bao-cao/mien-giam', { params: filterHK ? { maHK: filterHK } : {} }); return data; },
+  });
+
+  const rows = query.data ?? [];
+  const fmt = (n: number | null) => n != null ? n.toLocaleString('vi-VN') + 'đ' : '—';
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <Select value={filterNamHoc || 'all'} onValueChange={(v) => { setFilterNamHoc(v === 'all' ? '' : v); setFilterHK(''); }}>
+            <SelectTrigger className="w-36"><SelectValue placeholder="Năm học" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tất cả năm</SelectItem>
+              {namHocList.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={filterHK || 'all'} onValueChange={(v) => setFilterHK(v === 'all' ? '' : v)}>
+            <SelectTrigger className="w-44"><SelectValue placeholder="Tất cả học kỳ" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tất cả học kỳ</SelectItem>
+              {filteredHK.map(hk => <SelectItem key={hk.MaHK} value={hk.MaHK}>{hk.TenHK} {hk.NamHoc}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          {(filterNamHoc || filterHK) && (
+            <button type="button" onClick={() => { setFilterNamHoc(''); setFilterHK(''); }} className="text-sm text-slate-500 underline hover:text-slate-800">Xoá bộ lọc</button>
+          )}
+          <span className="text-sm text-slate-500">{rows.length} sinh viên được miễn giảm</span>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => exportToExcel(rows, [
+          { header: 'Mã SV', key: 'MaSV' }, { header: 'Họ tên', key: 'TenSV' }, { header: 'Lớp', key: 'TenLop' },
+          { header: 'Ngành', key: 'TenNganh' }, { header: 'Đối tượng', key: 'TenDoiTuong' },
+          { header: '% Giảm', key: 'PhanTramGiam' }, { header: 'Số tiền gốc', key: 'SoTienGoc' },
+          { header: 'Phải đóng', key: 'SoTienPhaiDong' }, { header: 'Tiết kiệm', key: 'TietKiem' },
+        ], 'sv-mien-giam-hp')} disabled={!rows.length}>
+          <IconFileSpreadsheet className="h-4 w-4" />Xuất Excel
+        </Button>
+      </div>
+
+      {query.isLoading && <div className="h-40 animate-pulse rounded-lg bg-slate-100" />}
+      {!query.isLoading && rows.length === 0 ? (
+        <div className="rounded-xl border py-12 text-center text-slate-400 text-sm">Không có sinh viên được miễn giảm</div>
+      ) : (
+        <div className="rounded-xl border overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 border-b">
+              <tr>
+                {['Mã SV','Họ tên','Lớp','Ngành','Đối tượng ưu tiên','% Giảm','Tiền gốc','Phải đóng','Tiết kiệm'].map(h => (
+                  <th key={h} className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {rows.map(r => (
+                <tr key={r.MaSV} className="hover:bg-slate-50">
+                  <td className="px-3 py-2.5 font-mono font-semibold">{r.MaSV}</td>
+                  <td className="px-3 py-2.5 font-medium">{r.TenSV}</td>
+                  <td className="px-3 py-2.5 text-slate-500">{r.TenLop ?? '—'}</td>
+                  <td className="px-3 py-2.5 text-slate-500">{r.TenNganh ?? '—'}</td>
+                  <td className="px-3 py-2.5">
+                    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${r.IsVungSau ? 'bg-amber-100 text-amber-700' : 'bg-teal-100 text-teal-700'}`}>
+                      {r.IsVungSau && '📍 '}{r.TenDoiTuong}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2.5 font-semibold text-teal-700">{r.PhanTramGiam}</td>
+                  <td className="px-3 py-2.5 font-mono text-slate-600">{fmt(r.SoTienGoc)}</td>
+                  <td className="px-3 py-2.5 font-mono text-emerald-600">{fmt(r.SoTienPhaiDong)}</td>
+                  <td className="px-3 py-2.5 font-mono font-semibold text-teal-700">{fmt(r.TietKiem)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function SinhVienPage() {
   const qc = useQueryClient();
   const [formOpen, setFormOpen] = useState(false);
@@ -440,6 +572,18 @@ export function SinhVienPage() {
         }
       />
 
+      <Tabs defaultValue="list">
+        <TabsList className="mb-4">
+          <TabsTrigger value="list">Danh sách sinh viên</TabsTrigger>
+          <TabsTrigger value="mien-giam">Miễn giảm học phí</TabsTrigger>
+          <TabsTrigger value="huyen">Huyện/Quận</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="mien-giam"><MienGiamTab /></TabsContent>
+        <TabsContent value="huyen"><HuyenPage /></TabsContent>
+
+        <TabsContent value="list">
+
       {listQuery.isLoading && (
         <div className="h-[300px] animate-pulse rounded-xl bg-slate-100" />
       )}
@@ -490,6 +634,8 @@ export function SinhVienPage() {
       />
 
       <SinhVienDetailSheet sv={selectedSV} onClose={() => setSelectedSV(null)} />
+        </TabsContent>
+      </Tabs>
     </>
   );
 }

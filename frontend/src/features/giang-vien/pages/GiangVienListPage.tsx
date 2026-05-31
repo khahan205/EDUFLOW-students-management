@@ -1,5 +1,6 @@
-import { useMemo, useRef, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMemo, useRef, useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { useReactToPrint } from 'react-to-print';
 import {
   IconUsers,
@@ -8,6 +9,9 @@ import {
   IconChalkboard,
   IconCalendar,
   IconPlus,
+  IconPencil,
+  IconToggleRight,
+  IconToggleLeft,
 } from '@tabler/icons-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Input } from '@/components/ui/input';
@@ -15,8 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import { ActionButton } from '@/components/common/ActionButton';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
@@ -162,6 +165,79 @@ function AddTeacherDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
           >
             {mutation.isPending ? 'Đang tạo...' : 'Tạo tài khoản'}
           </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ── Dialog: Sửa thông tin tài khoản GV ── */
+function EditAccountDialog({ gv, onClose }: { gv: GiangVienRow | null; onClose: () => void }) {
+  const qc = useQueryClient();
+  const [hoTen, setHoTen] = useState('');
+  const [email, setEmail] = useState('');
+
+  useEffect(() => {
+    if (gv) { setHoTen(gv.HoTen); setEmail(gv.Email ?? ''); }
+  }, [gv]);
+
+  const mutation = useMutation({
+    mutationFn: () => apiClient.put(`/giang-vien/${gv!.MaTK}/account`, { hoTen: hoTen.trim(), email: email.trim() }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['giang-vien-list'] });
+      qc.invalidateQueries({ queryKey: ['gv-detail', gv?.MaTK] });
+      toast.success('Đã cập nhật thông tin giảng viên');
+      onClose();
+    },
+    onError: (err: { message?: string }) => toast.error(err.message ?? 'Cập nhật thất bại'),
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: (trangThai: string) => apiClient.put(`/giang-vien/${gv!.MaTK}/account`, { trangThai }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['giang-vien-list'] });
+      toast.success('Đã cập nhật trạng thái tài khoản');
+      onClose();
+    },
+    onError: (err: { message?: string }) => toast.error(err.message ?? 'Cập nhật thất bại'),
+  });
+
+  if (!gv) return null;
+  const isActive = !('TrangThai' in gv) || (gv as { TrangThai?: string }).TrangThai !== 'INACTIVE';
+
+  return (
+    <Dialog open={!!gv} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Sửa tài khoản — {gv.Username}</DialogTitle>
+          <p className="text-xs text-slate-500">Chỉnh sửa họ tên và email hiển thị</p>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label>Họ và tên</Label>
+            <Input value={hoTen} onChange={(e) => setHoTen(e.target.value)} autoFocus />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Email</Label>
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          </div>
+          <div className="flex items-center justify-between rounded-lg border px-4 py-2.5">
+            <span className="text-sm text-slate-600">Trạng thái tài khoản</span>
+            <button
+              type="button"
+              disabled={toggleMutation.isPending}
+              onClick={() => toggleMutation.mutate(isActive ? 'INACTIVE' : 'ACTIVE')}
+              className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                isActive ? 'bg-emerald-50 text-emerald-700 hover:bg-red-50 hover:text-red-700' : 'bg-red-50 text-red-700 hover:bg-emerald-50 hover:text-emerald-700'
+              }`}
+            >
+              {isActive ? <><IconToggleRight className="h-4 w-4" />Đang hoạt động</> : <><IconToggleLeft className="h-4 w-4" />Đã vô hiệu hoá</>}
+            </button>
+          </div>
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={onClose}>Huỷ</Button>
+          <Button disabled={!hoTen.trim() || mutation.isPending} onClick={() => mutation.mutate()}>Lưu</Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -380,6 +456,7 @@ export function GiangVienListPage() {
   const [pageSize] = useState(15);
   const [selected, setSelected] = useState<GiangVienRow | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [editAccount, setEditAccount] = useState<GiangVienRow | null>(null);
 
   const query = useQuery({
     queryKey: ['giang-vien-list'],
@@ -452,6 +529,7 @@ export function GiangVienListPage() {
                     <TableHead>Học vị / Học hàm</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead className="text-center">Năm CT</TableHead>
+                    <TableHead className="text-center">Thao tác</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -498,6 +576,14 @@ export function GiangVienListPage() {
                           ? <span className="font-medium">{gv.profile.NamCongTac}</span>
                           : <span className="text-slate-400">—</span>}
                       </TableCell>
+                      <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                        <ActionButton
+                          tone="edit"
+                          icon={<IconPencil className="h-3.5 w-3.5" />}
+                          label="Sửa tài khoản"
+                          onClick={() => setEditAccount(gv)}
+                        />
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -518,6 +604,7 @@ export function GiangVienListPage() {
 
       <ProfileDialog gv={selected} onClose={() => setSelected(null)} />
       <AddTeacherDialog open={addOpen} onOpenChange={setAddOpen} />
+      <EditAccountDialog gv={editAccount} onClose={() => setEditAccount(null)} />
     </>
   );
 }

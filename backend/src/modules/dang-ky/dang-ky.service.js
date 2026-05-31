@@ -173,14 +173,26 @@ export async function register({ maSV, maHK, maMH }) {
       };
     }
 
-    // 4. Check sĩ số
+    // 4. Kiểm tra giới hạn 30TC/học kỳ (QĐ an toàn)
+    const dangKyActive = await tx.phieuHocPhi.findMany({
+      where: { MaSV: maSV, MaHK: maHK, TrangThai: 'ACTIVE' },
+      include: { monHoc: { select: { SoTinChi: true } } },
+    });
+    const tongTCDaDangKy = dangKyActive.reduce((sum, p) => sum + p.monHoc.SoTinChi, 0);
+    if (tongTCDaDangKy + mh.SoTinChi > 30) {
+      throw ApiError.badRequest(
+        `Vượt quá giới hạn 30 tín chỉ/học kỳ. Đã đăng ký ${tongTCDaDangKy} TC, môn này thêm ${mh.SoTinChi} TC (tổng ${tongTCDaDangKy + mh.SoTinChi} TC).`,
+      );
+    }
+
+    // 5. Check sĩ số
     if (mh.SiSoHienTai >= mh.SiSoToiDa) {
       throw ApiError.conflict(
         `Môn "${maMH}" đã đầy (${mh.SiSoHienTai}/${mh.SiSoToiDa}).`,
       );
     }
 
-    // 5. Tính học phí
+    // 6. Tính học phí
     const { soTienDangKy, soTienPhaiDong } = await calculateTuition(sv, mh);
 
     // 6. Sinh mã phiếu duy nhất

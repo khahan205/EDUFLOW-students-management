@@ -157,7 +157,7 @@ export interface EnrollmentStatRow {
 
 /* ============ Auth ============ */
 
-export type UserRole = 'admin' | 'phong-dao-tao' | 'phong-tai-chinh' | 'co-van' | 'giang-vien';
+export type UserRole = 'admin' | 'phong-dao-tao' | 'phong-tai-chinh' | 'co-van' | 'giang-vien' | 'sinh-vien';
 
 export interface User {
   id: string;

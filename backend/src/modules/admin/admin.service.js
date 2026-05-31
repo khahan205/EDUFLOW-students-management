@@ -33,6 +33,7 @@ export async function createAccount(input) {
       HoTen: input.HoTen,
       Email: input.Email || null,
       VaiTro: input.VaiTro,
+      MustChangePassword: true, // Bắt buộc đổi mật khẩu lần đầu đăng nhập
     },
   });
   return toResponse(tk);
@@ -69,7 +70,7 @@ export async function resetPassword(maTK, newPassword) {
   const passwordHash = await hashPassword(newPassword);
   await prisma.taiKhoan.update({
     where: { MaTK: id },
-    data: { PasswordHash: passwordHash },
+    data: { PasswordHash: passwordHash, MustChangePassword: true }, // Admin reset → bắt đổi lại
   });
 }
 

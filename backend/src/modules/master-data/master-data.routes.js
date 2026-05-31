@@ -19,6 +19,70 @@ router.get(
   }),
 );
 
+router.post(
+  '/hoc-ky',
+  requireRole('ADMIN', 'PHONG_DAO_TAO'),
+  asyncHandler(async (req, res) => {
+    const { MaHK, TenHK, NamHoc, NgayBatDau, NgayKetThuc } = req.body;
+    if (!MaHK || !TenHK || !NamHoc) return res.status(400).json({ message: 'Thieu thong tin hoc ky.' });
+    const exists = await prisma.hocKy.findUnique({ where: { MaHK } });
+    if (exists) return res.status(409).json({ message: `Mã học kỳ "${MaHK}" đã tồn tại.` });
+    const hk = await prisma.hocKy.create({
+      data: {
+        MaHK, TenHK, NamHoc, LaHienTai: false,
+        NgayBatDau: NgayBatDau ? new Date(NgayBatDau) : null,
+        NgayKetThuc: NgayKetThuc ? new Date(NgayKetThuc) : null,
+      },
+    });
+    res.status(201).json(hk);
+  }),
+);
+
+router.put(
+  '/hoc-ky/:maHK',
+  requireRole('ADMIN', 'PHONG_DAO_TAO'),
+  asyncHandler(async (req, res) => {
+    const { TenHK, NamHoc, NgayBatDau, NgayKetThuc } = req.body;
+    const hk = await prisma.hocKy.findUnique({ where: { MaHK: req.params.maHK } });
+    if (!hk) return res.status(404).json({ message: 'Học kỳ không tồn tại.' });
+    const updated = await prisma.hocKy.update({
+      where: { MaHK: req.params.maHK },
+      data: {
+        TenHK: TenHK ?? hk.TenHK,
+        NamHoc: NamHoc ?? hk.NamHoc,
+        NgayBatDau: NgayBatDau ? new Date(NgayBatDau) : hk.NgayBatDau,
+        NgayKetThuc: NgayKetThuc ? new Date(NgayKetThuc) : hk.NgayKetThuc,
+      },
+    });
+    res.json(updated);
+  }),
+);
+
+router.put(
+  '/hoc-ky/:maHK/set-current',
+  requireRole('ADMIN', 'PHONG_DAO_TAO'),
+  asyncHandler(async (req, res) => {
+    // Tắt tất cả HK hiện tại trước
+    await prisma.hocKy.updateMany({ data: { LaHienTai: false } });
+    const hk = await prisma.hocKy.update({
+      where: { MaHK: req.params.maHK },
+      data: { LaHienTai: true },
+    });
+    res.json(hk);
+  }),
+);
+
+router.delete(
+  '/hoc-ky/:maHK',
+  requireRole('ADMIN'),
+  asyncHandler(async (req, res) => {
+    const hasData = await prisma.phieuHocPhi.count({ where: { MaHK: req.params.maHK } });
+    if (hasData > 0) return res.status(409).json({ message: `Không thể xóa: học kỳ này đã có ${hasData} phiếu đăng ký.` });
+    await prisma.hocKy.delete({ where: { MaHK: req.params.maHK } });
+    res.json({ ok: true });
+  }),
+);
+
 router.get(
   '/hoc-ky/current',
   asyncHandler(async (_req, res) => {

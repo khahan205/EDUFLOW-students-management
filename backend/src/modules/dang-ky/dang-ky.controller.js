@@ -18,6 +18,13 @@ export const getMonMoCtrl = asyncHandler(async (req, res) => {
 
 export const registerCtrl = asyncHandler(async (req, res) => {
   const input = validate(registerSchema, req.body);
+  // Sinh viên chỉ được ĐK cho chính mình
+  if (req.user.role === 'sinh-vien') {
+    const tk = await import('../../config/prisma.js').then(m => m.prisma.taiKhoan.findUnique({ where: { MaTK: req.user.MaTK } }));
+    if (!tk?.MaSV || tk.MaSV !== input.maSV) {
+      throw ApiError.badRequest('Sinh vien chi duoc dang ky mon cho chinh minh.');
+    }
+  }
   res.status(201).json(await svc.register(input));
 });
 

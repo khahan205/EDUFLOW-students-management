@@ -23,6 +23,7 @@ enum VaiTro {
   PHONG_TAI_CHINH
   GIANG_VIEN
   CO_VAN
+  SINH_VIEN
 }
 
 enum TrangThaiTK {
@@ -39,6 +40,7 @@ model TaiKhoan {
   VaiTro             VaiTro
   TrangThai          TrangThaiTK @default(ACTIVE)
   MustChangePassword Boolean     @default(false)
+  MaSV               String?     @unique @db.VarChar(20) // Link tới SinhVien nếu là tài khoản sinh viên
   NgayTao            DateTime    @default(now())
   NgayCapNhat        DateTime    @updatedAt
   LastLoginAt        DateTime?
@@ -174,6 +176,7 @@ model SinhVien {
   phieuHocPhis PhieuHocPhi[]
   phieuThus    PhieuThu[]
   donGiaHans   DonGiaHan[]
+  diems        Diem[]
 
   @@index([MaQueQuan])
   @@index([MaDoiTuong])
@@ -201,6 +204,7 @@ model MonHoc {
   monHocMos    MonHocMo[]
   chuongTrinhHocs ChuongTrinhHoc[]
   phieuHocPhis PhieuHocPhi[]
+  diems        Diem[]
 
   @@index([MaLoaiMon])
   @@map("MONHOC")
@@ -218,6 +222,7 @@ model HocKy {
   phieuHocPhis PhieuHocPhi[]
   phieuThus    PhieuThu[]
   donGiaHans   DonGiaHan[]
+  diems        Diem[]
 
   @@map("HOCKY")
 }
@@ -305,6 +310,26 @@ model PhieuHocPhi {
   @@index([MaMH])
   @@index([TrangThai])
   @@map("PHIEUHOCPHI")
+}
+
+// Diem = kết quả học tập của sinh viên theo từng môn/HK
+model Diem {
+  MaDiem       Int       @id @default(autoincrement())
+  MaSV         String    @db.VarChar(20)
+  sinhVien     SinhVien  @relation(fields: [MaSV], references: [MaSV])
+  MaMH         String    @db.VarChar(20)
+  monHoc       MonHoc    @relation(fields: [MaMH], references: [MaMH])
+  MaHK         String    @db.VarChar(30)
+  hocKy        HocKy     @relation(fields: [MaHK], references: [MaHK])
+  DiemGiuaKy  Float?
+  DiemCuoiKy  Float?
+  DiemTBHP     Float?    // Trung bình học phần = 0.3*GK + 0.7*CK
+  NgayCapNhat  DateTime  @updatedAt
+
+  @@unique([MaSV, MaMH, MaHK])
+  @@index([MaSV])
+  @@index([MaHK])
+  @@map("DIEM")
 }
 
 // DonGiaHan = đơn xin gia hạn nộp học phí của sinh viên.

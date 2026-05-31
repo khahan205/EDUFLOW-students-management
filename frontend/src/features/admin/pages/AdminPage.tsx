@@ -13,6 +13,8 @@ import { AccountFormDialog } from '../components/AccountFormDialog';
 import { ResetPasswordDialog } from '../components/ResetPasswordDialog';
 import { AuditLogTab } from '../components/AuditLogTab';
 import { ThamSoTab } from '../components/ThamSoTab';
+import { DoiTuongPage } from '@/features/danh-muc/pages/DoiTuongPage';
+import { HocKyPage } from '@/features/hoc-ky/pages/HocKyPage';
 
 export function AdminPage() {
   const qc = useQueryClient();
@@ -84,7 +86,9 @@ export function AdminPage() {
         <TabsList className="mb-4">
           <TabsTrigger value="accounts">Tài khoản</TabsTrigger>
           <TabsTrigger value="audit">Lịch sử hoạt động</TabsTrigger>
+          <TabsTrigger value="hocky">Học kỳ</TabsTrigger>
           <TabsTrigger value="thamso">Tham số hệ thống</TabsTrigger>
+          <TabsTrigger value="doituong">Đối tượng ưu tiên</TabsTrigger>
         </TabsList>
 
         <TabsContent value="accounts">
@@ -108,6 +112,8 @@ export function AdminPage() {
         <TabsContent value="thamso">
           <ThamSoTab />
         </TabsContent>
+        <TabsContent value="hocky"><HocKyPage /></TabsContent>
+        <TabsContent value="doituong"><DoiTuongPage /></TabsContent>
       </Tabs>
 
       <AccountFormDialog open={formOpen} onOpenChange={setFormOpen} editing={editing} />

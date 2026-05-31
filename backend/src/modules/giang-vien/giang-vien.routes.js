@@ -131,6 +131,27 @@ router.put(
   }),
 );
 
+/* ── Admin / PDT: sửa thông tin tài khoản giảng viên ── */
+router.put(
+  '/:maTK/account',
+  canView,
+  asyncHandler(async (req, res) => {
+    const maTK = Number(req.params.maTK);
+    const { hoTen, email, trangThai } = req.body;
+    const tk = await prisma.taiKhoan.findUnique({ where: { MaTK: maTK } });
+    if (!tk || tk.VaiTro !== 'GIANG_VIEN') throw ApiError.notFound('Giảng viên không tồn tại.');
+    const updated = await prisma.taiKhoan.update({
+      where: { MaTK: maTK },
+      data: {
+        HoTen: hoTen ?? tk.HoTen,
+        Email: email !== undefined ? (email || null) : tk.Email,
+        TrangThai: trangThai ?? tk.TrangThai,
+      },
+    });
+    res.json({ MaTK: updated.MaTK, HoTen: updated.HoTen, Email: updated.Email, TrangThai: updated.TrangThai });
+  }),
+);
+
 /* ── Admin / PDT: xem hồ sơ 1 giảng viên cụ thể ── */
 router.get(
   '/:maTK',

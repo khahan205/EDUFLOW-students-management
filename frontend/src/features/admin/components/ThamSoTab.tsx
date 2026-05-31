@@ -15,9 +15,8 @@ interface ThamSo {
 }
 
 const LABELS: Record<string, string> = {
-  don_gia_tin_chi:                  'Đơn giá / tín chỉ (đ)',
-  he_so_lt:                         'Hệ số môn Lý thuyết',
-  he_so_th:                         'Hệ số môn Thực hành',
+  don_gia_tin_chi_ly_thuyet:        'Đơn giá / TC môn Lý thuyết (đ)',
+  don_gia_tin_chi_thuc_hanh:        'Đơn giá / TC môn Thực hành (đ)',
   ti_le_mien_giam_top_dau:          'Tỉ lệ miễn giảm — Học lực xuất sắc',
   ti_le_mien_giam_vung_sau_xa:      'Tỉ lệ miễn giảm — Vùng sâu vùng xa',
   si_so_toi_da_mac_dinh:            'Sĩ số tối đa mặc định (mỗi lớp)',

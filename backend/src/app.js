@@ -24,6 +24,11 @@ import giangVienRouter from './modules/giang-vien/giang-vien.routes.js';
 import chuongTrinhHocRouter from './modules/chuong-trinh-hoc/chuong-trinh-hoc.routes.js';
 import nganhHocRouter from './modules/nganh-hoc/nganh-hoc.routes.js';
 import khoaRouter from './modules/khoa/khoa.routes.js';
+import huyenRouter from './modules/huyen/huyen.routes.js';
+import studentRouter from './modules/student/student.routes.js';
+import diemRouter from './modules/diem/diem.routes.js';
+import queQuanRouter from './modules/que-quan/que-quan.routes.js';
+import doiTuongRouter from './modules/doi-tuong/doi-tuong.routes.js';
 import donGiaHanRouter from './modules/don-gia-han/don-gia-han.routes.js';
 
 const app = express();
@@ -83,6 +88,11 @@ app.use('/api/giang-vien', giangVienRouter);
 app.use('/api/chuong-trinh-hoc', chuongTrinhHocRouter);
 app.use('/api/nganh-hoc', nganhHocRouter);
 app.use('/api/khoa', khoaRouter);
+app.use('/api/huyen', huyenRouter);
+app.use('/api/student', studentRouter);
+app.use('/api/diem', diemRouter);
+app.use('/api/que-quan', queQuanRouter);
+app.use('/api/doi-tuong', doiTuongRouter);
 app.use('/api/don-gia-han', donGiaHanRouter);
 app.use('/api', masterDataRouter); // /api/hoc-ky, /api/que-quan, /api/cau-hinh/gia, ...
 

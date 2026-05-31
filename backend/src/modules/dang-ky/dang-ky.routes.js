@@ -6,7 +6,7 @@ import { listStudentsForCourseCtrl, getMonMoCtrl, registerCtrl, unregisterCtrl, 
 const router = Router();
 router.use(authenticate);
 
-const canRegister = requireRole('ADMIN', 'PHONG_DAO_TAO');
+const canRegister = requireRole('ADMIN', 'PHONG_DAO_TAO', 'SINH_VIEN');
 
 // Static routes before dynamic :maSV param
 router.get('/sinh-vien-lop', listStudentsForCourseCtrl);
