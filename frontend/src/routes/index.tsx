@@ -127,7 +127,7 @@ export const router = createBrowserRouter([
             children: [{ path: ROUTES.BAO_CAO, element: <BaoCaoPage /> }],
           },
           {
-            element: <ProtectedRoute allowedRoles={['admin']} />,
+            element: <ProtectedRoute allowedRoles={['admin', 'phong-dao-tao']} />,
             children: [
               { path: ROUTES.ADMIN, element: <AdminPage /> },
             ],

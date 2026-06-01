@@ -36,6 +36,7 @@ export function BaoCaoPage() {
   const handlePrint = useReactToPrint({ contentRef: printRef });
   const [filterHK, setFilterHK] = useState('');
   const [filterBM13HK, setFilterBM13HK] = useState('');
+  const [trendPeriod, setTrendPeriod] = useState('6thang');
 
   const revenueByHKQuery = useQuery({
     queryKey: ['revenue-by-semester'],
@@ -44,7 +45,10 @@ export function BaoCaoPage() {
 
   const paymentQuery = useQuery({ queryKey: ['bao-cao', 'payment-status'], queryFn: fetchPaymentStatusBreakdown });
   const enrollmentQuery = useQuery({ queryKey: ['bao-cao', 'enrollment'], queryFn: fetchEnrollmentStats });
-  const trendQuery = useQuery({ queryKey: ['bao-cao', 'revenue-trend'], queryFn: fetchRevenueTrend });
+  const trendQuery = useQuery({
+    queryKey: ['bao-cao', 'revenue-trend', trendPeriod],
+    queryFn: () => fetchRevenueTrend(trendPeriod),
+  });
 
   const hocKyQuery = useQuery({
     queryKey: ['hoc-ky-list'],
@@ -145,14 +149,14 @@ export function BaoCaoPage() {
           {paymentQuery.data && <PaymentStatusChart data={paymentQuery.data} />}
           {enrollmentQuery.data && <EnrollmentStats rows={enrollmentQuery.data} />}
         </div>
-        {trendQuery.data && <RevenueTrend data={trendQuery.data} />}
+        {trendQuery.data && <RevenueTrend data={trendQuery.data} period={trendPeriod} onPeriodChange={setTrendPeriod} />}
       </div>
 
       {/* BM13.1 — Báo cáo tổng kết doanh thu học kỳ */}
       <Card className="mt-5">
         <CardHeader>
           <div className="flex items-center justify-between gap-4">
-            <CardTitle className="text-sm">BM13.1 — Báo cáo tổng kết doanh thu học kỳ</CardTitle>
+            <CardTitle className="text-sm">Báo cáo tổng kết doanh thu học kỳ</CardTitle>
             <div className="flex items-center gap-2">
               <Select value={filterBM13HK || 'all'} onValueChange={(v) => setFilterBM13HK(v === 'all' ? '' : v)}>
                 <SelectTrigger className="w-52">
@@ -178,7 +182,7 @@ export function BaoCaoPage() {
                   { header: 'Số tiền đã thu (đ)', key: 'DaThu' },
                   { header: 'Số tiền còn nợ (đ)', key: 'ConLai' },
                   { header: 'Số sinh viên', key: 'SoSinhVien' },
-                ], 'BM13.1-doanh-thu-hoc-ky');
+                ], 'doanh-thu-hoc-ky');
               }} disabled={!revenueByHKQuery.data?.length}>
                 <IconFileSpreadsheet className="h-4 w-4" />
                 Xuất Excel

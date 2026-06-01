@@ -21,8 +21,8 @@ export const enrollmentStatsCtrl = asyncHandler(async (_req, res) => {
   res.json(await svc.getEnrollmentStats());
 });
 
-export const revenueTrendCtrl = asyncHandler(async (_req, res) => {
-  res.json(await svc.getRevenueTrend());
+export const revenueTrendCtrl = asyncHandler(async (req, res) => {
+  res.json(await svc.getRevenueTrend(req.query.period ?? '6thang'));
 });
 
 export const sinhVienNoCtrl = asyncHandler(async (req, res) => {

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuthStore } from '@/stores/auth-store';
 import { IconSettings, IconPlus, IconFileSpreadsheet } from '@tabler/icons-react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -18,6 +19,8 @@ import { HocKyPage } from '@/features/hoc-ky/pages/HocKyPage';
 
 export function AdminPage() {
   const qc = useQueryClient();
+  const role = useAuthStore((s) => s.user?.role);
+  const isAdmin = role === 'admin';  // PDT chỉ thấy tab cấu hình, không thấy Tài khoản / Lịch sử
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<AccountRow | null>(null);
   const [toDelete, setToDelete] = useState<AccountRow | null>(null);
@@ -65,10 +68,10 @@ export function AdminPage() {
   return (
     <>
       <PageHeader
-        title="Quản trị hệ thống"
+        title={isAdmin ? 'Quản trị hệ thống' : 'Cấu hình hệ thống'}
         icon={<IconSettings className="h-4 w-4" />}
         iconTone="purple"
-        actions={
+        actions={isAdmin ? (
           <div className="flex gap-2">
             <Button variant="outline" onClick={handleExport} disabled={!accountsQuery.data}>
               <IconFileSpreadsheet className="h-4 w-4" />
@@ -79,35 +82,39 @@ export function AdminPage() {
               Tạo tài khoản
             </Button>
           </div>
-        }
+        ) : undefined}
       />
 
-      <Tabs defaultValue="accounts">
+      <Tabs defaultValue={isAdmin ? 'accounts' : 'hocky'}>
         <TabsList className="mb-4">
-          <TabsTrigger value="accounts">Tài khoản</TabsTrigger>
-          <TabsTrigger value="audit">Lịch sử hoạt động</TabsTrigger>
+          {isAdmin && <TabsTrigger value="accounts">Tài khoản</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="audit">Lịch sử hoạt động</TabsTrigger>}
           <TabsTrigger value="hocky">Học kỳ</TabsTrigger>
           <TabsTrigger value="thamso">Tham số hệ thống</TabsTrigger>
           <TabsTrigger value="doituong">Đối tượng ưu tiên</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="accounts">
-          {accountsQuery.isLoading && (
-            <div className="h-[300px] animate-pulse rounded-xl bg-slate-100" />
-          )}
-          {accountsQuery.data && (
-            <AccountTable
-              rows={accountsQuery.data}
-              onEdit={handleEdit}
-              onDelete={(acc) => setToDelete(acc)}
-              onResetPassword={(acc) => setResetPwAcc(acc)}
-            />
-          )}
-        </TabsContent>
+        {isAdmin && (
+          <TabsContent value="accounts">
+            {accountsQuery.isLoading && (
+              <div className="h-[300px] animate-pulse rounded-xl bg-slate-100" />
+            )}
+            {accountsQuery.data && (
+              <AccountTable
+                rows={accountsQuery.data}
+                onEdit={handleEdit}
+                onDelete={(acc) => setToDelete(acc)}
+                onResetPassword={(acc) => setResetPwAcc(acc)}
+              />
+            )}
+          </TabsContent>
+        )}
 
-        <TabsContent value="audit">
-          <AuditLogTab />
-        </TabsContent>
+        {isAdmin && (
+          <TabsContent value="audit">
+            <AuditLogTab />
+          </TabsContent>
+        )}
 
         <TabsContent value="thamso">
           <ThamSoTab />

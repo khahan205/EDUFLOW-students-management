@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { IconBook2, IconPlus, IconSettings, IconFileSpreadsheet } from '@tabler/icons-react';
+import { IconBook2, IconPlus, IconSettings, IconFileSpreadsheet, IconLock, IconLockOpen, IconBooks } from '@tabler/icons-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { apiClient } from '@/services/api-client';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -22,6 +24,16 @@ export function MonHocPage() {
   const [filterLoaiMon, setFilterLoaiMon] = useState('');
 
   const listQuery = useQuery({ queryKey: ['mon-hoc'], queryFn: fetchMonHocList });
+
+  // Thống kê môn học mở/đóng dựa trên lớp học phần hiện tại
+  const monHocMoQuery = useQuery({
+    queryKey: ['mon-hoc-mo-all'],
+    queryFn: async () => {
+      const { data } = await apiClient.get<{ MaMH: string }[]>('/mon-hoc-mo');
+      return data;
+    },
+    staleTime: 30_000,
+  });
 
   const filtered = useMemo(() => {
     if (!listQuery.data) return [];
@@ -82,6 +94,35 @@ export function MonHocPage() {
           </div>
         }
       />
+
+      {/* Thẻ thống kê */}
+      {listQuery.data && (() => {
+        const totalMon = listQuery.data.length;
+        const openMaMHs = new Set((monHocMoQuery.data ?? []).map(m => m.MaMH));
+        const soMoHienTai = listQuery.data.filter(m => openMaMHs.has(m.MaMH)).length;
+        const soChua = totalMon - soMoHienTai;
+        return (
+          <div className="grid grid-cols-3 gap-4 mb-4">
+            {[
+              { icon: IconBooks,    label: 'Tổng số môn học', value: totalMon,     color: 'text-slate-700',   bg: 'bg-slate-50   border-slate-200' },
+              { icon: IconLockOpen, label: 'Đang mở lớp học phần', value: soMoHienTai, color: 'text-teal-700', bg: 'bg-teal-50    border-teal-200' },
+              { icon: IconLock,     label: 'Chưa mở lớp học phần', value: soChua,    color: 'text-amber-700',  bg: 'bg-amber-50   border-amber-200' },
+            ].map(({ icon: Icon, label, value, color, bg }) => (
+              <Card key={label} className={`border ${bg}`}>
+                <CardContent className="flex items-center gap-4 pt-4 pb-4">
+                  <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${bg}`}>
+                    <Icon className={`h-5 w-5 ${color}`} />
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500 uppercase tracking-wide">{label}</p>
+                    <p className={`text-2xl font-bold mt-0.5 ${color}`}>{value}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        );
+      })()}
 
       {listQuery.isLoading && <div className="h-[400px] animate-pulse rounded-xl bg-slate-100" />}
       {listQuery.data && (

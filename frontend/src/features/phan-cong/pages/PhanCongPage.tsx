@@ -42,7 +42,7 @@ function AssignDialog({
 
   const gvQuery = useQuery({
     queryKey: ['giang-vien-accounts'],
-    queryFn: fetchGiangVienAccounts,
+    queryFn: () => fetchGiangVienAccounts(),
     enabled: !!row,
     staleTime: 60_000,
   });

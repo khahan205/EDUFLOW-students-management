@@ -27,11 +27,13 @@ export async function fetchEnrollmentStats(): Promise<EnrollmentStatRow[]> {
   return data;
 }
 
-export async function fetchRevenueTrend(): Promise<RevenueTrendPoint[]> {
+export async function fetchRevenueTrend(period = '6thang'): Promise<RevenueTrendPoint[]> {
   if (USE_MOCK) {
     await delay();
     return mockRevenueTrend;
   }
-  const { data } = await apiClient.get<RevenueTrendPoint[]>('/bao-cao/doanh-thu-trend');
+  const { data } = await apiClient.get<RevenueTrendPoint[]>('/bao-cao/doanh-thu-trend', {
+    params: { period },
+  });
   return data;
 }

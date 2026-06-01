@@ -52,6 +52,7 @@ const NAV: NavItem[] = [
   { to: ROUTES.HOC_PHI,         label: 'Học phí',          Icon: IconCashBanknote,    roles: ['admin', 'phong-tai-chinh', 'phong-dao-tao'] },
   { to: ROUTES.BAO_CAO,         label: 'Báo cáo',          Icon: IconChartBar,        roles: ['admin', 'phong-dao-tao', 'phong-tai-chinh'] },
   { to: ROUTES.ADMIN,           label: 'Admin',            Icon: IconSettings,        roles: ['admin'] },
+  { to: ROUTES.ADMIN,           label: 'Cấu hình',         Icon: IconSettings,        roles: ['phong-dao-tao'] },
 ];
 
 const ROLE_LABELS: Record<string, string> = {

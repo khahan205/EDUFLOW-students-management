@@ -45,10 +45,10 @@ function AssignDialog({ row, onClose }: { row: MonHocMoRow | null; onClose: () =
   const [selectedMaTK, setSelectedMaTK] = useState('');
 
   const gvQuery = useQuery({
-    queryKey: ['giang-vien-accounts'],
-    queryFn: fetchGiangVienAccounts,
+    queryKey: ['giang-vien-accounts', row?.MaHK],
+    queryFn: () => fetchGiangVienAccounts(row?.MaHK),
     enabled: !!row,
-    staleTime: 60_000,
+    staleTime: 30_000,
   });
 
   const assignMutation = useMutation({
@@ -101,8 +101,19 @@ function AssignDialog({ row, onClose }: { row: MonHocMoRow | null; onClose: () =
             </SelectTrigger>
             <SelectContent>
               {(gvQuery.data ?? []).map((gv) => (
-                <SelectItem key={gv.MaTK} value={String(gv.MaTK)}>
-                  {gv.HoTen}{gv.Email ? ` (${gv.Email})` : ''}
+                <SelectItem
+                  key={gv.MaTK}
+                  value={String(gv.MaTK)}
+                  disabled={gv.DayDu && String(gv.MaTK) !== (row?.GiangVien ? String(row.GiangVien.MaTK) : '')}
+                >
+                  <span className={gv.DayDu ? 'text-red-500' : undefined}>
+                    {gv.HoTen}
+                    {gv.SoLopHienTai !== undefined && (
+                      <span className={`ml-2 text-xs ${gv.DayDu ? 'text-red-500 font-semibold' : 'text-slate-400'}`}>
+                        ({gv.SoLopHienTai}/{gv.SoLopToiDa} lớp{gv.DayDu ? ' — Đã đủ' : ''})
+                      </span>
+                    )}
+                  </span>
                 </SelectItem>
               ))}
             </SelectContent>

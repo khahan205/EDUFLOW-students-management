@@ -209,7 +209,7 @@ export function ThuHocPhiDialog({ open, onOpenChange, row }: Props) {
                 <FormItem>
                   <FormLabel>Số tiền thu lần này (VND)</FormLabel>
                   <FormControl>
-                    <Input type="number" min={isBankTransfer ? minCK : 1} max={row.ConLai} step={100_000} {...field} />
+                    <Input type="number" min={isBankTransfer ? minCK : 1} max={row.ConLai} step={1} {...field} />
                   </FormControl>
                   <p className="text-[11.5px] text-slate-500">
                     Tối đa: {formatCurrencyVND(row.ConLai)}

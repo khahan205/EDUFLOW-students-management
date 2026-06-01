@@ -15,6 +15,9 @@ export interface GiangVienAccount {
   HoTen: string;
   Email: string | null;
   Username: string;
+  SoLopHienTai?: number;
+  SoLopToiDa?: number;
+  DayDu?: boolean;
 }
 
 export async function fetchPhanCong(): Promise<PhanCongRow[]> {
@@ -22,8 +25,10 @@ export async function fetchPhanCong(): Promise<PhanCongRow[]> {
   return data;
 }
 
-export async function fetchGiangVienAccounts(): Promise<GiangVienAccount[]> {
-  const { data } = await apiClient.get<GiangVienAccount[]>('/phan-cong/giang-vien');
+export async function fetchGiangVienAccounts(maHK?: string): Promise<GiangVienAccount[]> {
+  const { data } = await apiClient.get<GiangVienAccount[]>('/phan-cong/giang-vien', {
+    params: maHK ? { maHK } : undefined,
+  });
   return data;
 }
 

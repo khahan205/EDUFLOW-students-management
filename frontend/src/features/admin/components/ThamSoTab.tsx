@@ -25,6 +25,7 @@ const LABELS: Record<string, string> = {
   ngan_hang_so_tk:                  'Số tài khoản',
   ngan_hang_chu_tk:                 'Chủ tài khoản',
   chuyen_khoan_so_tien_toi_thieu:   'Số tiền tối thiểu chuyển khoản (đ)',
+  so_lop_toi_da_gv_per_hk:          'Số lớp tối đa mỗi GV được dạy trong 1 học kỳ',
 };
 
 function ThamSoRow({ ts }: { ts: ThamSo }) {

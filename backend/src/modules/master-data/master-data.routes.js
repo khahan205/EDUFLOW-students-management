@@ -155,7 +155,7 @@ router.get(
 
 router.put(
   '/tham-so/:ten',
-  requireRole('ADMIN'),
+  requireRole('ADMIN', 'PHONG_DAO_TAO'),
   asyncHandler(async (req, res) => {
     const { ten } = req.params;
     const { giaTri } = req.body;

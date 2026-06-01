@@ -44,6 +44,25 @@ export async function assignGiangVien({ maHK, maMH, maTK }) {
   if (!taiKhoan) throw ApiError.notFound('Tài khoản không tồn tại.');
   if (taiKhoan.VaiTro !== 'GIANG_VIEN') throw ApiError.badRequest('Tài khoản này không phải giảng viên.');
 
+  // Kiểm tra khối lượng giảng dạy — số lớp tối đa/HK
+  const thamSo = await prisma.thamSo.findUnique({ where: { TenThamSo: 'so_lop_toi_da_gv_per_hk' } });
+  const soLopToiDa = thamSo ? Number(thamSo.GiaTri) : 3;
+
+  // Đếm số lớp GV đã dạy trong HK này (không tính lớp đang phân công lại)
+  const soLopHienTai = await prisma.phanCongGiangDay.count({
+    where: {
+      MaTK: maTK,
+      MaHK: maHK,
+      NOT: { MaMH: maMH }, // Cho phép cập nhật lớp đã phân công
+    },
+  });
+
+  if (soLopHienTai >= soLopToiDa) {
+    throw ApiError.badRequest(
+      `Giảng viên "${taiKhoan.HoTen}" đã dạy ${soLopHienTai}/${soLopToiDa} lớp trong học kỳ này (giới hạn tối đa ${soLopToiDa} lớp/HK).`,
+    );
+  }
+
   await prisma.phanCongGiangDay.upsert({
     where: { MaHK_MaMH: { MaHK: maHK, MaMH: maMH } },
     create: { MaHK: maHK, MaMH: maMH, MaTK: maTK },
@@ -84,11 +103,30 @@ export async function listMyClasses(maTK) {
   }));
 }
 
-export async function listGiangVienAccounts() {
+export async function listGiangVienAccounts(maHK) {
   const rows = await prisma.taiKhoan.findMany({
     where: { VaiTro: 'GIANG_VIEN', TrangThai: 'ACTIVE' },
     select: { MaTK: true, HoTen: true, Email: true, Username: true },
     orderBy: { HoTen: 'asc' },
   });
-  return rows;
+
+  const thamSo = await prisma.thamSo.findUnique({ where: { TenThamSo: 'so_lop_toi_da_gv_per_hk' } });
+  const soLopToiDa = thamSo ? Number(thamSo.GiaTri) : 3;
+
+  if (!maHK) return rows.map(r => ({ ...r, SoLopHienTai: 0, SoLopToiDa: soLopToiDa }));
+
+  // Đếm số lớp mỗi GV đang dạy trong HK này
+  const phanCongs = await prisma.phanCongGiangDay.groupBy({
+    by: ['MaTK'],
+    where: { MaHK: maHK },
+    _count: { MaMH: true },
+  });
+  const countMap = Object.fromEntries(phanCongs.map(p => [p.MaTK, p._count.MaMH]));
+
+  return rows.map(r => ({
+    ...r,
+    SoLopHienTai: countMap[r.MaTK] ?? 0,
+    SoLopToiDa: soLopToiDa,
+    DayDu: (countMap[r.MaTK] ?? 0) >= soLopToiDa,
+  }));
 }

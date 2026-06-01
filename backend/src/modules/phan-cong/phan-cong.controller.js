@@ -8,7 +8,7 @@ export async function listPhanCongCtrl(req, res, next) {
 
 export async function listGiangVienCtrl(req, res, next) {
   try {
-    res.json(await listGiangVienAccounts());
+    res.json(await listGiangVienAccounts(req.query.maHK));
   } catch (err) { next(err); }
 }
 
