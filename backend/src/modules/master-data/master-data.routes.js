@@ -153,20 +153,46 @@ router.get(
   }),
 );
 
+router.post(
+  '/tham-so',
+  requireRole('ADMIN', 'PHONG_DAO_TAO'),
+  asyncHandler(async (req, res) => {
+    const { tenThamSo, giaTri, kieuDuLieu = 'string', moTa = '' } = req.body;
+    if (!tenThamSo || giaTri === undefined) {
+      return res.status(400).json({ message: 'Thiếu tên hoặc giá trị tham số.' });
+    }
+    const exists = await prisma.thamSo.findUnique({ where: { TenThamSo: tenThamSo } });
+    if (exists) return res.status(409).json({ message: `Tham số "${tenThamSo}" đã tồn tại.` });
+    const created = await prisma.thamSo.create({
+      data: { TenThamSo: tenThamSo, GiaTri: String(giaTri), KieuDuLieu: kieuDuLieu, MoTa: moTa },
+    });
+    res.status(201).json(created);
+  }),
+);
+
 router.put(
   '/tham-so/:ten',
   requireRole('ADMIN', 'PHONG_DAO_TAO'),
   asyncHandler(async (req, res) => {
     const { ten } = req.params;
-    const { giaTri } = req.body;
+    const { giaTri, moTa } = req.body;
     if (giaTri === undefined) {
       return res.status(400).json({ message: 'Thiếu giá trị tham số.' });
     }
     const updated = await prisma.thamSo.update({
       where: { TenThamSo: ten },
-      data: { GiaTri: String(giaTri) },
+      data: { GiaTri: String(giaTri), ...(moTa !== undefined ? { MoTa: moTa } : {}) },
     });
     res.json(updated);
+  }),
+);
+
+router.delete(
+  '/tham-so/:ten',
+  requireRole('ADMIN', 'PHONG_DAO_TAO'),
+  asyncHandler(async (req, res) => {
+    await prisma.thamSo.delete({ where: { TenThamSo: req.params.ten } });
+    res.json({ ok: true });
   }),
 );
 
