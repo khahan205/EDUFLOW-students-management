@@ -87,6 +87,16 @@ export function ThuHocPhiDialog({ open, onOpenChange, row }: Props) {
   const deadlineDate = currentHK?.NgayKetThuc ? new Date(currentHK.NgayKetThuc) : null;
   const isDeadlinePassed = deadlineDate ? new Date() > deadlineDate : false;
 
+  // Tự điền ghi chú khi phát hiện trễ hạn (sau khi HK data đã load)
+  useEffect(() => {
+    if (isDeadlinePassed && open && deadlineDate) {
+      const currentGhiChu = form.getValues('ghiChu');
+      if (!currentGhiChu || !currentGhiChu.includes('trễ hạn')) {
+        form.setValue('ghiChu', `Đóng trễ hạn quy định (hạn chót: ${deadlineDate.toLocaleDateString('vi-VN')})`);
+      }
+    }
+  }, [isDeadlinePassed, open, deadlineDate, form]);
+
   const thamSoMap = Object.fromEntries(
     (thamSoQuery.data ?? []).map((t) => [t.TenThamSo, t.GiaTri])
   );
@@ -138,14 +148,15 @@ export function ThuHocPhiDialog({ open, onOpenChange, row }: Props) {
           </DialogTitle>
         </DialogHeader>
 
-        {/* Cảnh báo quá hạn đóng học phí (QĐ6) */}
+        {/* Cảnh báo trễ hạn đóng học phí (QĐ6) — vẫn cho thu nhưng ghi chú tự động */}
         {isDeadlinePassed && (
-          <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            <IconAlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <IconAlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
             <div>
-              <p className="font-semibold">Đã quá thời hạn đóng học phí</p>
-              <p className="mt-0.5 text-xs text-red-600">
-                Hạn chót: {deadlineDate!.toLocaleDateString('vi-VN')} — Không thể thu học phí sau thời hạn quy định.
+              <p className="font-semibold">Sinh viên đóng học phí trễ hạn</p>
+              <p className="mt-0.5 text-xs text-amber-700">
+                Hạn chót: {deadlineDate!.toLocaleDateString('vi-VN')} — Phiếu thu sẽ tự động được ghi chú &quot;Đóng trễ hạn&quot;.
+                Sinh viên có thể không được dự thi cuối kỳ theo quy định.
               </p>
             </div>
           </div>
@@ -266,11 +277,10 @@ export function ThuHocPhiDialog({ open, onOpenChange, row }: Props) {
               </Button>
               <Button
                 type="submit"
-                variant="success"
-                disabled={mutation.isPending || amountTooSmall || isDeadlinePassed}
-                title={isDeadlinePassed ? `Quá hạn đóng HP: ${deadlineDate!.toLocaleDateString('vi-VN')}` : undefined}
+                variant={isDeadlinePassed ? 'outline' : 'success'}
+                disabled={mutation.isPending || amountTooSmall}
               >
-                {mutation.isPending ? 'Đang thu...' : 'Xác nhận thu'}
+                {mutation.isPending ? 'Đang thu...' : isDeadlinePassed ? '⚠ Xác nhận thu (trễ hạn)' : 'Xác nhận thu'}
               </Button>
             </DialogFooter>
           </form>

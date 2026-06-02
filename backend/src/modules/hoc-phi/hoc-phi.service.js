@@ -96,12 +96,14 @@ export async function getHistory(maSV, maHK) {
  */
 export async function pay({ maSV, maHK, soTien, ghiChu, hinhThucTT }) {
   return prisma.$transaction(async (tx) => {
-    // QĐ6: Kiểm tra thời hạn đóng học phí (HanDong = NgayKetThuc của HK)
+    // QĐ6: Kiểm tra thời hạn — vẫn cho thu nhưng ghi chú trễ hạn để tracking
     const hk = await tx.hocKy.findUnique({ where: { MaHK: maHK } });
-    if (hk?.NgayKetThuc && new Date() > new Date(hk.NgayKetThuc)) {
-      throw ApiError.badRequest(
-        `Đã quá thời hạn đóng học phí của học kỳ này. Hạn chót: ${new Date(hk.NgayKetThuc).toLocaleDateString('vi-VN')}. Sinh viên không được dự thi nếu chưa đóng đủ.`,
-      );
+    const treHan = hk?.NgayKetThuc && new Date() > new Date(hk.NgayKetThuc);
+    if (treHan) {
+      const hanStr = new Date(hk.NgayKetThuc).toLocaleDateString('vi-VN');
+      ghiChu = ghiChu
+        ? `[Đóng trễ hạn ${hanStr}] ${ghiChu}`
+        : `Đóng trễ hạn quy định (hạn chót: ${hanStr})`;
     }
 
     // Tổng số tiền phải đóng của SV trong HK
