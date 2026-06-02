@@ -159,23 +159,23 @@ function PhieuDangKyTab() {
 }
 
 /* ── BM12: Tra cứu phiếu thu ── */
+interface PhieuThuRow2Extended extends PhieuThuRow2 { TongPhaiDong?: number; ConLai?: number; }
+
 function PhieuThuTab() {
   const [maPhieuThu, setMaPhieuThu] = useState('');
   const [maSV, setMaSV] = useState('');
-  const [maHK, setMaHK] = useState('');
+  const [ngayThu, setNgayThu] = useState('');
   const [searched, setSearched] = useState(false);
 
-  const hkQuery = useQuery({
-    queryKey: ['hoc-ky-list'],
-    queryFn: async () => { const { data } = await apiClient.get<HocKyOption[]>('/master-data/hoc-ky'); return data; },
-    staleTime: 300_000,
-  });
-
   const query = useQuery({
-    queryKey: ['phieu-thu-search', maPhieuThu, maSV, maHK],
+    queryKey: ['phieu-thu-search', maPhieuThu, maSV, ngayThu],
     queryFn: async () => {
-      const { data } = await apiClient.get<PhieuThuRow2[]>('/hoc-phi/tra-cuu/phieu-thu', {
-        params: { maPhieuThu: maPhieuThu || undefined, maSV: maSV || undefined, maHK: maHK || undefined },
+      const { data } = await apiClient.get<PhieuThuRow2Extended[]>('/hoc-phi/tra-cuu/phieu-thu', {
+        params: {
+          maPhieuThu: maPhieuThu || undefined,
+          maSV: maSV || undefined,
+          ngayThu: ngayThu || undefined,
+        },
       });
       return data;
     },
@@ -198,16 +198,8 @@ function PhieuThuTab() {
             <Input placeholder="22521001" value={maSV} onChange={(e) => setMaSV(e.target.value)} className="w-36" />
           </div>
           <div className="space-y-1">
-            <p className="text-xs font-medium text-slate-500">Học kỳ</p>
-            <Select value={maHK || 'all'} onValueChange={(v) => setMaHK(v === 'all' ? '' : v)}>
-              <SelectTrigger className="w-44"><SelectValue placeholder="Tất cả" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả học kỳ</SelectItem>
-                {(hkQuery.data ?? []).map((hk) => (
-                  <SelectItem key={hk.MaHK} value={hk.MaHK}>{hk.TenHK} {hk.NamHoc}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <p className="text-xs font-medium text-slate-500">Ngày lập</p>
+            <Input type="date" value={ngayThu} onChange={(e) => setNgayThu(e.target.value)} className="w-40" />
           </div>
           <Button onClick={() => setSearched(true)}>Tra cứu</Button>
           {searched && data.length > 0 && (
@@ -216,7 +208,7 @@ function PhieuThuTab() {
               { header: 'Mã SV', key: 'MaSV' }, { header: 'Họ tên', key: 'TenSV' },
               { header: 'Học kỳ', key: 'TenHK' }, { header: 'Năm học', key: 'NamHoc' },
               { header: 'Ngày thu', key: 'NgayThu' }, { header: 'Số tiền thu (đ)', key: 'SoTienThu' },
-              { header: 'Ghi chú', key: 'GhiChu' },
+              { header: 'Công nợ còn lại (đ)', key: 'ConLai' }, { header: 'Ghi chú', key: 'GhiChu' },
             ], 'phieu-thu')}>
               <IconFileSpreadsheet className="h-4 w-4" />Xuất Excel
             </Button>
@@ -242,6 +234,7 @@ function PhieuThuTab() {
                       <TableHead>Học kỳ</TableHead>
                       <TableHead>Ngày thu</TableHead>
                       <TableHead className="text-right">Số tiền thu</TableHead>
+                      <TableHead className="text-right text-red-600">Công nợ còn lại</TableHead>
                       <TableHead>Ghi chú</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -256,6 +249,13 @@ function PhieuThuTab() {
                           {new Date(r.NgayThu).toLocaleDateString('vi-VN')}
                         </TableCell>
                         <TableCell className="text-right font-semibold text-emerald-700">{fmt(r.SoTienThu)}</TableCell>
+                        <TableCell className="text-right font-semibold">
+                          {(r as PhieuThuRow2Extended).ConLai !== undefined ? (
+                            (r as PhieuThuRow2Extended).ConLai! > 0
+                              ? <span className="text-red-600">{fmt((r as PhieuThuRow2Extended).ConLai!)}</span>
+                              : <span className="text-emerald-600 text-xs">Đã đóng đủ</span>
+                          ) : '—'}
+                        </TableCell>
                         <TableCell className="text-slate-500 text-sm">{r.GhiChu}</TableCell>
                       </TableRow>
                     ))}

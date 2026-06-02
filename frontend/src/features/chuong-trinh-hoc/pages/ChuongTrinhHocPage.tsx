@@ -29,13 +29,21 @@ function AddDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: bo
   const [hocKy, setHocKy] = useState('1');
 
   const nganhQuery = useQuery({
-    queryKey: ['nganh-hoc'], staleTime: 300_000,
-    queryFn: async () => { const { data } = await apiClient.get<NganhOption[]>('/master-data/nganh-hoc'); return data; },
+    queryKey: ['nganh-for-cth'], staleTime: 300_000,
+    queryFn: async () => { const { data } = await apiClient.get<NganhOption[]>('/nganh-hoc'); return data; },
   });
   const monHocQuery = useQuery({
-    queryKey: ['mon-hoc-list'], staleTime: 300_000,
+    queryKey: ['mon-hoc-for-cth'], staleTime: 300_000,
     queryFn: async () => { const { data } = await apiClient.get<MonHocOption[]>('/mon-hoc'); return data; },
   });
+  // Môn đã có trong CTH của ngành đang chọn
+  const cthQuery = useQuery({
+    queryKey: ['cth-check', maNganh],
+    queryFn: async () => { const { data } = await apiClient.get<{ MaMH: string }[]>('/chuong-trinh-hoc', { params: { maNganh } }); return data; },
+    enabled: !!maNganh,
+  });
+  const daCo = new Set((cthQuery.data ?? []).map(c => c.MaMH));
+  const monChuaCo = (monHocQuery.data ?? []).filter(m => !daCo.has(m.MaMH));
 
   const mutation = useMutation({
     mutationFn: () => addCTH({ maNganh, maMH, hocKy: Number(hocKy) }),
@@ -55,7 +63,7 @@ function AddDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: bo
         <div className="space-y-4">
           <div className="space-y-1.5">
             <Label>Ngành học <span className="text-red-500">*</span></Label>
-            <Select value={maNganh} onValueChange={setMaNganh}>
+            <Select value={maNganh} onValueChange={(v) => { setMaNganh(v); setMaMH(''); }}>
               <SelectTrigger><SelectValue placeholder="— Chọn ngành —" /></SelectTrigger>
               <SelectContent>
                 {(nganhQuery.data ?? []).map((n) => (
@@ -66,12 +74,18 @@ function AddDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: bo
           </div>
           <div className="space-y-1.5">
             <Label>Môn học <span className="text-red-500">*</span></Label>
-            <Select value={maMH} onValueChange={setMaMH}>
-              <SelectTrigger><SelectValue placeholder="— Chọn môn học —" /></SelectTrigger>
+            <Select value={maMH} onValueChange={setMaMH} disabled={!maNganh}>
+              <SelectTrigger>
+                <SelectValue placeholder={!maNganh ? '— Chọn ngành trước —' : monChuaCo.length === 0 ? '— Đã thêm đủ môn —' : '— Chọn môn học —'} />
+              </SelectTrigger>
               <SelectContent>
-                {(monHocQuery.data ?? []).map((m) => (
-                  <SelectItem key={m.MaMH} value={m.MaMH}>{m.TenMH} ({m.MaMH})</SelectItem>
-                ))}
+                {monChuaCo.length === 0 && maNganh ? (
+                  <div className="py-3 text-center text-sm text-slate-400">Tất cả môn học đã có trong CTH ngành này</div>
+                ) : (
+                  monChuaCo.map((m) => (
+                    <SelectItem key={m.MaMH} value={m.MaMH}>{m.TenMH} <span className="text-slate-400">({m.MaMH})</span></SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -127,6 +141,8 @@ function EditDialog({ row, onClose }: { row: CTHRow | null; onClose: () => void 
 export function ChuongTrinhHocPage() {
   const qc = useQueryClient();
   const [filterNganh, setFilterNganh] = useState('');
+  const [filterKhoa, setFilterKhoa] = useState('');
+  const [filterHocKy, setFilterHocKy] = useState('');
   const [search, setSearch] = useState('');
   const [addOpen, setAddOpen] = useState(false);
   const [editRow, setEditRow] = useState<CTHRow | null>(null);
@@ -144,6 +160,18 @@ export function ChuongTrinhHocPage() {
     queryFn: () => fetchCTH(filterNganh || undefined),
   });
 
+  // Khoa options: lấy từ ngành (MaKhoa)
+  const khoaOptions = useMemo(() => {
+    const set = new Set((nganhQuery.data ?? []).map((n) => n.MaKhoa).filter(Boolean));
+    return Array.from(set).sort();
+  }, [nganhQuery.data]);
+
+  // HocKy options: lấy từ CTH data (thứ tự 1, 2, 3...)
+  const hocKyOptions = useMemo(() => {
+    const set = new Set((query.data ?? []).map((r) => r.HocKy));
+    return Array.from(set).sort((a, b) => a - b);
+  }, [query.data]);
+
   const deleteMutation = useMutation({
     mutationFn: (id: number) => deleteCTH(id),
     onSuccess: () => {
@@ -155,10 +183,13 @@ export function ChuongTrinhHocPage() {
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    return (query.data ?? []).filter(
-      (r) => !q || r.MaMH.toLowerCase().includes(q) || r.TenMH.toLowerCase().includes(q) || r.TenNganh.toLowerCase().includes(q),
-    );
-  }, [query.data, search]);
+    return (query.data ?? []).filter((r) => {
+      if (filterKhoa && r.MaKhoa !== filterKhoa) return false;
+      if (filterHocKy && r.HocKy !== Number(filterHocKy)) return false;
+      if (q && !r.MaMH.toLowerCase().includes(q) && !r.TenMH.toLowerCase().includes(q) && !r.TenNganh.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [query.data, search, filterKhoa, filterHocKy]);
 
   const paginated = useMemo(() => filtered.slice((page - 1) * pageSize, page * pageSize), [filtered, page, pageSize]);
 
@@ -202,10 +233,10 @@ export function ChuongTrinhHocPage() {
               placeholder="Tìm mã môn, tên môn, tên ngành..."
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-              className="w-64"
+              className="w-56"
             />
             <Select value={filterNganh || 'all'} onValueChange={(v) => { setFilterNganh(v === 'all' ? '' : v); setPage(1); }}>
-              <SelectTrigger className="w-52">
+              <SelectTrigger className="w-48">
                 <SelectValue placeholder="Tất cả ngành" />
               </SelectTrigger>
               <SelectContent>
@@ -217,10 +248,34 @@ export function ChuongTrinhHocPage() {
                 ))}
               </SelectContent>
             </Select>
-            {(search || filterNganh) && (
+            {khoaOptions.length > 0 && (
+              <Select value={filterKhoa || 'all'} onValueChange={(v) => { setFilterKhoa(v === 'all' ? '' : v); setFilterNganh(''); setPage(1); }}>
+                <SelectTrigger className="w-36">
+                  <SelectValue placeholder="Tất cả khoa" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả khoa</SelectItem>
+                  {khoaOptions.map((k) => (
+                    <SelectItem key={k} value={k}>{k}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <Select value={filterHocKy || 'all'} onValueChange={(v) => { setFilterHocKy(v === 'all' ? '' : v); setPage(1); }}>
+              <SelectTrigger className="w-36">
+                <SelectValue placeholder="Tất cả HK" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả học kỳ</SelectItem>
+                {hocKyOptions.map((hk) => (
+                  <SelectItem key={hk} value={String(hk)}>Học kỳ {hk}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {(search || filterNganh || filterKhoa || filterHocKy) && (
               <button
                 type="button"
-                onClick={() => { setSearch(''); setFilterNganh(''); setPage(1); }}
+                onClick={() => { setSearch(''); setFilterNganh(''); setFilterKhoa(''); setFilterHocKy(''); setPage(1); }}
                 className="text-sm text-slate-500 underline hover:text-slate-800"
               >
                 Xoá bộ lọc

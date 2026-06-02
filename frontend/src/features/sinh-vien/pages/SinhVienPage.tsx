@@ -200,7 +200,7 @@ function SinhVienDetailSheet({
                 {hkQuery.data && (
                   <div className="col-span-2">
                     <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Học kỳ hiện tại</p>
-                    <p className="mt-0.5 font-medium text-teal-700">{hkQuery.data.TenHK}</p>
+                    <p className="mt-0.5 font-medium text-teal-700">{hkQuery.data.TenHK} — {(hkQuery.data as {NamHoc?: string}).NamHoc ?? ''}</p>
                   </div>
                 )}
               </div>
@@ -506,16 +506,24 @@ export function SinhVienPage() {
   const [selectedSV, setSelectedSV] = useState<SinhVien | null>(null);
   const [search, setSearch] = useState('');
   const [filterTrangThai, setFilterTrangThai] = useState('');
+  const [filterNganh, setFilterNganh] = useState('');
   const [page, setPage] = useState(1);
   const pageSize = 20;
 
   // Reset về trang 1 khi filter thay đổi
   const handleSearch = (v: string) => { setSearch(v); setPage(1); };
   const handleFilter = (v: string) => { setFilterTrangThai(v); setPage(1); };
+  const handleFilterNganh = (v: string) => { setFilterNganh(v); setPage(1); };
+
+  const nganhQuery = useQuery({
+    queryKey: ['nganh-hoc'],
+    queryFn: async () => { const { data } = await apiClient.get<{ MaNganh: string; TenNganh: string }[]>('/nganh-hoc'); return data; },
+    staleTime: 300_000,
+  });
 
   const listQuery = useQuery({
-    queryKey: ['sinh-vien', page, pageSize, search, filterTrangThai],
-    queryFn: () => fetchSinhVienList({ page, limit: pageSize, search, trangThai: filterTrangThai }),
+    queryKey: ['sinh-vien', page, pageSize, search, filterTrangThai, filterNganh],
+    queryFn: () => fetchSinhVienList({ page, limit: pageSize, search, trangThai: filterTrangThai, maNganh: filterNganh }),
     placeholderData: (prev) => prev,
   });
 
@@ -538,7 +546,7 @@ export function SinhVienPage() {
 
   const handleExport = async () => {
     // Xuất toàn bộ (không phân trang)
-    const all = await fetchSinhVienList({ limit: 9999, search, trangThai: filterTrangThai });
+    const all = await fetchSinhVienList({ limit: 9999, search, trangThai: filterTrangThai, maNganh: filterNganh });
     exportToExcel(
       all.data,
       [
@@ -599,6 +607,9 @@ export function SinhVienPage() {
             onSearchChange={handleSearch}
             filterTrangThai={filterTrangThai}
             onFilterTrangThaiChange={handleFilter}
+            filterNganh={filterNganh}
+            onFilterNganhChange={handleFilterNganh}
+            nganhOptions={nganhQuery.data ?? []}
           />
           {/* Server-side pagination info */}
           <div className="mt-2 flex items-center justify-between text-sm text-slate-500">

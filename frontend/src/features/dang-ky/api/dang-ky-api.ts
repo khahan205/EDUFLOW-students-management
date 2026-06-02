@@ -31,7 +31,7 @@ export async function fetchCurrentHocKy(): Promise<CurrentHK> {
     await delay(50);
     return MOCK_CURRENT_HK;
   }
-  const { data } = await apiClient.get<CurrentHK>('/hoc-ky/current');
+  const { data } = await apiClient.get<CurrentHK>('/master-data/hoc-ky/current');
   return data;
 }
 

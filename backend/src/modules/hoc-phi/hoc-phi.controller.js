@@ -23,6 +23,6 @@ export const searchPhieuDangKyCtrl = asyncHandler(async (req, res) => {
 });
 
 export const searchPhieuThuCtrl = asyncHandler(async (req, res) => {
-  const { maPhieuThu, maSV, maHK } = req.query;
-  res.json(await svc.searchPhieuThu({ maPhieuThu, maSV, maHK }));
+  const { maPhieuThu, maSV, maHK, ngayThu } = req.query;
+  res.json(await svc.searchPhieuThu({ maPhieuThu, maSV, maHK, ngayThu }));
 });

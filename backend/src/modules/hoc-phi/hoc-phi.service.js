@@ -96,6 +96,14 @@ export async function getHistory(maSV, maHK) {
  */
 export async function pay({ maSV, maHK, soTien, ghiChu, hinhThucTT }) {
   return prisma.$transaction(async (tx) => {
+    // QĐ6: Kiểm tra thời hạn đóng học phí (HanDong = NgayKetThuc của HK)
+    const hk = await tx.hocKy.findUnique({ where: { MaHK: maHK } });
+    if (hk?.NgayKetThuc && new Date() > new Date(hk.NgayKetThuc)) {
+      throw ApiError.badRequest(
+        `Đã quá thời hạn đóng học phí của học kỳ này. Hạn chót: ${new Date(hk.NgayKetThuc).toLocaleDateString('vi-VN')}. Sinh viên không được dự thi nếu chưa đóng đủ.`,
+      );
+    }
+
     // Tổng số tiền phải đóng của SV trong HK
     const phpAgg = await tx.phieuHocPhi.aggregate({
       where: { MaSV: maSV, MaHK: maHK },
@@ -204,14 +212,23 @@ export async function searchPhieuDangKy({ maPhieu, maSV, maHK }) {
 
 /**
  * BM12 — Tra cứu phiếu thu học phí.
+ * QĐ12: tìm theo Mã phiếu thu, MSSV, Ngày lập; hiển thị tình trạng công nợ sau thu.
  */
-export async function searchPhieuThu({ maPhieuThu, maSV, maHK }) {
+export async function searchPhieuThu({ maPhieuThu, maSV, maHK, ngayThu }) {
+  const where = {
+    ...(maPhieuThu ? { MaPhieuThu: { contains: maPhieuThu } } : {}),
+    ...(maSV       ? { MaSV: { contains: maSV }              } : {}),
+    ...(maHK       ? { MaHK: maHK }                            : {}),
+    ...(ngayThu    ? {
+      NgayThu: {
+        gte: new Date(`${ngayThu}T00:00:00`),
+        lt: new Date(`${ngayThu}T23:59:59.999`),
+      },
+    } : {}),
+  };
+
   const rows = await prisma.phieuThu.findMany({
-    where: {
-      ...(maPhieuThu ? { MaPhieuThu: { contains: maPhieuThu } } : {}),
-      ...(maSV       ? { MaSV: { contains: maSV }              } : {}),
-      ...(maHK       ? { MaHK: maHK }                            : {}),
-    },
+    where,
     include: {
       sinhVien: { select: { TenSV: true } },
       hocKy:    { select: { TenHK: true, NamHoc: true } },
@@ -219,10 +236,42 @@ export async function searchPhieuThu({ maPhieuThu, maSV, maHK }) {
     orderBy: { NgayThu: 'desc' },
     take: 200,
   });
-  return rows.map((r) => ({
-    MaPhieuThu: r.MaPhieuThu, MaSV: r.MaSV, TenSV: r.sinhVien.TenSV,
-    MaHK: r.MaHK, TenHK: r.hocKy.TenHK, NamHoc: r.hocKy.NamHoc,
-    NgayThu: r.NgayThu.toISOString(), SoTienThu: Number(r.SoTienThu),
-    HinhThucTT: r.HinhThucTT, GhiChu: r.GhiChu ?? '',
-  }));
+
+  if (rows.length === 0) return [];
+
+  // Tính tình trạng công nợ hiện tại (ConLai) cho từng SV+HK
+  const pairs = [...new Set(rows.map((r) => `${r.MaSV}||${r.MaHK}`))].map((k) => {
+    const [sv, hk] = k.split('||');
+    return { MaSV: sv, MaHK: hk };
+  });
+
+  const [phpAgg, ptAgg] = await Promise.all([
+    prisma.phieuHocPhi.groupBy({
+      by: ['MaSV', 'MaHK'],
+      where: { OR: pairs },
+      _sum: { SoTienPhaiDong: true },
+    }),
+    prisma.phieuThu.groupBy({
+      by: ['MaSV', 'MaHK'],
+      where: { OR: pairs },
+      _sum: { SoTienThu: true },
+    }),
+  ]);
+
+  const phaiDongMap = Object.fromEntries(phpAgg.map((r) => [`${r.MaSV}||${r.MaHK}`, Number(r._sum.SoTienPhaiDong) || 0]));
+  const daThuMap    = Object.fromEntries(ptAgg.map((r) => [`${r.MaSV}||${r.MaHK}`, Number(r._sum.SoTienThu) || 0]));
+
+  return rows.map((r) => {
+    const key = `${r.MaSV}||${r.MaHK}`;
+    const phaiDong = phaiDongMap[key] || 0;
+    const daThu    = daThuMap[key] || 0;
+    const conLai   = Math.max(0, phaiDong - daThu);
+    return {
+      MaPhieuThu: r.MaPhieuThu, MaSV: r.MaSV, TenSV: r.sinhVien.TenSV,
+      MaHK: r.MaHK, TenHK: r.hocKy.TenHK, NamHoc: r.hocKy.NamHoc,
+      NgayThu: r.NgayThu.toISOString(), SoTienThu: Number(r.SoTienThu),
+      HinhThucTT: r.HinhThucTT, GhiChu: r.GhiChu ?? '',
+      TongPhaiDong: phaiDong, ConLai: conLai,
+    };
+  });
 }

@@ -1,6 +1,8 @@
 ﻿import { useQuery } from '@tanstack/react-query';
 import { IconLayoutDashboard, IconClock, IconAlertCircle } from '@tabler/icons-react';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { apiClient } from '@/services/api-client';
+interface HKInfo { MaHK: string; TenHK: string; NamHoc: string; }
 import {
   fetchDashboardStats,
   fetchRevenueBySemester,
@@ -27,6 +29,12 @@ export function DashboardPage() {
     retry: 1,
   });
 
+  const currentHKQuery = useQuery({
+    queryKey: ['hoc-ky-current'],
+    queryFn: async () => { const { data } = await apiClient.get<HKInfo>('/master-data/hoc-ky/current'); return data; },
+    staleTime: 300_000,
+  });
+
   const isAnyError = statsQuery.isError || revenueQuery.isError || debtsQuery.isError;
   const isLoading = statsQuery.isLoading || revenueQuery.isLoading || debtsQuery.isLoading;
 
@@ -37,9 +45,11 @@ export function DashboardPage() {
         icon={<IconLayoutDashboard className="h-4 w-4" />}
         iconTone="teal"
         actions={
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-sm font-medium text-slate-600">
-            <IconClock className="h-3.5 w-3.5 text-teal-600" />
-            Học kỳ hiện tại
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-teal-200 bg-teal-50 px-3.5 py-1.5 text-sm font-semibold text-teal-700">
+            <IconClock className="h-3.5 w-3.5" />
+            {currentHKQuery.data
+              ? `${currentHKQuery.data.TenHK} — ${currentHKQuery.data.NamHoc}`
+              : 'Học kỳ hiện tại'}
           </span>
         }
       />

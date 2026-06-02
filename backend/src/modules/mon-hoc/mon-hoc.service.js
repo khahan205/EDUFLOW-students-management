@@ -77,6 +77,46 @@ export async function remove(maMH) {
 }
 
 // =============================================================================
+//  TIÊN QUYẾT — quản lý môn học yêu cầu (MonHocYeuCau)
+// =============================================================================
+
+export async function listYeuCau(maMH) {
+  const rows = await prisma.monHocYeuCau.findMany({ where: { MaMH: maMH } });
+  if (rows.length === 0) return [];
+  const monHocs = await prisma.monHoc.findMany({
+    where: { MaMH: { in: rows.map((r) => r.MaMHYeuCau) } },
+    select: { MaMH: true, TenMH: true, MaLoaiMon: true, SoTinChi: true },
+  });
+  const monMap = Object.fromEntries(monHocs.map((m) => [m.MaMH, m]));
+  return rows.map((r) => ({
+    MaMH: r.MaMH, MaMHYeuCau: r.MaMHYeuCau,
+    TenMHYeuCau: monMap[r.MaMHYeuCau]?.TenMH ?? r.MaMHYeuCau,
+    MaLoaiMon: monMap[r.MaMHYeuCau]?.MaLoaiMon,
+    SoTinChi: monMap[r.MaMHYeuCau]?.SoTinChi,
+  }));
+}
+
+export async function addYeuCau(maMH, maMHYeuCau) {
+  if (maMH === maMHYeuCau) throw ApiError.badRequest('Môn học không thể là tiên quyết của chính nó.');
+  const [monHoc, monYC] = await Promise.all([
+    prisma.monHoc.findUnique({ where: { MaMH: maMH } }),
+    prisma.monHoc.findUnique({ where: { MaMH: maMHYeuCau } }),
+  ]);
+  if (!monHoc) throw ApiError.notFound(`Môn học "${maMH}" không tồn tại.`);
+  if (!monYC) throw ApiError.notFound(`Môn học tiên quyết "${maMHYeuCau}" không tồn tại.`);
+  await prisma.monHocYeuCau.upsert({
+    where: { MaMH_MaMHYeuCau: { MaMH: maMH, MaMHYeuCau: maMHYeuCau } },
+    create: { MaMH: maMH, MaMHYeuCau: maMHYeuCau },
+    update: {},
+  });
+  return { MaMH: maMH, MaMHYeuCau: maMHYeuCau };
+}
+
+export async function removeYeuCau(maMH, maMHYeuCau) {
+  await prisma.monHocYeuCau.deleteMany({ where: { MaMH: maMH, MaMHYeuCau: maMHYeuCau } });
+}
+
+// =============================================================================
 //  PRICING CONFIG — đọc/ghi vào bảng ThamSo
 // =============================================================================
 

@@ -247,7 +247,14 @@ export function BaoCaoPage() {
       <Card className="mt-5">
         <CardHeader>
           <div className="flex items-center justify-between gap-4">
-            <CardTitle className="text-sm">Danh sách sinh viên chưa hoàn thành đóng học phí</CardTitle>
+            <CardTitle className="text-sm">
+              Danh sách sinh viên chưa hoàn thành đóng học phí
+              {filterHK && hocKyQuery.data && (
+                <span className="ml-2 font-normal text-teal-600">
+                  — {hocKyQuery.data.find(h => h.MaHK === filterHK)?.TenHK} {hocKyQuery.data.find(h => h.MaHK === filterHK)?.NamHoc}
+                </span>
+              )}
+            </CardTitle>
             <div className="flex items-center gap-2">
               <Select value={filterHK || 'all'} onValueChange={(v) => setFilterHK(v === 'all' ? '' : v)}>
                 <SelectTrigger className="w-48">

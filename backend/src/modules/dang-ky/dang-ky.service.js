@@ -128,9 +128,13 @@ export async function register({ maSV, maHK, maMH }) {
       throw ApiError.badRequest(`Sinh viên "${maSV}" không ở trạng thái Đang học.`);
     }
 
-    // 2. Verify môn + check mở trong HK
-    const mh = await tx.monHoc.findUnique({ where: { MaMH: maMH } });
+    // 2. Verify môn + HK + check mở trong HK
+    const [mh, hk] = await Promise.all([
+      tx.monHoc.findUnique({ where: { MaMH: maMH } }),
+      tx.hocKy.findUnique({ where: { MaHK: maHK } }),
+    ]);
     if (!mh) throw ApiError.notFound(`Không tìm thấy môn "${maMH}".`);
+    if (!hk) throw ApiError.notFound(`Không tìm thấy học kỳ "${maHK}".`);
 
     const isMo = await tx.monHocMo.findUnique({
       where: { MaHK_MaMH: { MaHK: maHK, MaMH: maMH } },
@@ -202,6 +206,7 @@ export async function register({ maSV, maHK, maMH }) {
     const maPhieu = generateReceiptId('HP', todayCount + 1);
 
     // 7. Tạo phiếu + tăng sĩ số (atomic)
+    // HanDong = NgayKetThuc của HK (nếu có) — QĐ6: phải đóng trước khi HK kết thúc
     const phieu = await tx.phieuHocPhi.create({
       data: {
         MaPhieu: maPhieu,
@@ -210,6 +215,7 @@ export async function register({ maSV, maHK, maMH }) {
         MaHK: maHK,
         SoTienDangKy: soTienDangKy,
         SoTienPhaiDong: soTienPhaiDong,
+        HanDong: hk.NgayKetThuc ?? null,
       },
     });
 

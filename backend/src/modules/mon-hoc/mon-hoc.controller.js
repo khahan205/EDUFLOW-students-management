@@ -38,3 +38,19 @@ export const updatePricingCtrl = asyncHandler(async (req, res) => {
   const input = validate(pricingConfigSchema, req.body);
   res.json(await svc.updatePricingConfig(input));
 });
+
+// BM2 — Môn tiên quyết
+export const listYeuCauCtrl = asyncHandler(async (req, res) => {
+  res.json(await svc.listYeuCau(req.params.maMH));
+});
+
+export const addYeuCauCtrl = asyncHandler(async (req, res) => {
+  const { maMHYeuCau } = req.body;
+  if (!maMHYeuCau) return res.status(400).json({ message: 'Thiếu maMHYeuCau.' });
+  res.status(201).json(await svc.addYeuCau(req.params.maMH, maMHYeuCau));
+});
+
+export const removeYeuCauCtrl = asyncHandler(async (req, res) => {
+  await svc.removeYeuCau(req.params.maMH, req.params.maMHYeuCau);
+  res.status(204).end();
+});

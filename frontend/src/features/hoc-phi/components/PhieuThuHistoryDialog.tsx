@@ -58,17 +58,25 @@ export function PhieuThuHistoryDialog({ open, onOpenChange, row }: Props) {
           </DialogTitle>
         </DialogHeader>
 
-        {/* Số lần đóng */}
-        <div className="flex items-center justify-between rounded-lg bg-slate-50 px-4 py-2.5 text-sm">
-          <span className="text-slate-600">
-            Đã đóng <strong>{soLanDaDong}/{MAX_PAYMENTS}</strong> lần trong học kỳ này
-          </span>
-          {soLanConLai > 0 ? (
-            <Badge variant="success">Còn {soLanConLai} lần</Badge>
-          ) : (
-            <Badge variant="warning">Đã dùng hết lượt đóng</Badge>
-          )}
-        </div>
+        {/* Chỉ hiện counter lần đóng khi SV còn nợ (chưa đóng đủ) */}
+        {row && row.ConLai > 0 && (
+          <div className="flex items-center justify-between rounded-lg bg-slate-50 px-4 py-2.5 text-sm">
+            <span className="text-slate-600">
+              Đã đóng <strong>{soLanDaDong}/{MAX_PAYMENTS}</strong> lần trong học kỳ này
+            </span>
+            {soLanConLai > 0 ? (
+              <Badge variant="success">Còn {soLanConLai} lần</Badge>
+            ) : (
+              <Badge variant="warning">Đã dùng hết lượt đóng</Badge>
+            )}
+          </div>
+        )}
+        {row && row.ConLai === 0 && (
+          <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-4 py-2.5 text-sm text-emerald-700">
+            <Badge variant="success">Đã đóng đủ học phí</Badge>
+            <span>— Lịch sử {soLanDaDong} lần đóng tiền:</span>
+          </div>
+        )}
 
         {query.isLoading && <div className="h-32 animate-pulse rounded-lg bg-slate-100" />}
         {query.data && query.data.length === 0 && <EmptyState message="Chưa có phiếu thu nào" />}

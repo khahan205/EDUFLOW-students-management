@@ -13,6 +13,8 @@ import { Pagination } from '@/components/common/Pagination';
 import { useTableSort } from '@/hooks/use-table-sort';
 import type { SinhVien } from '@/types';
 
+interface NganhOption { MaNganh: string; TenNganh: string; }
+
 interface Props {
   rows: SinhVien[];
   onEdit: (sv: SinhVien) => void;
@@ -22,6 +24,9 @@ interface Props {
   onSearchChange: (v: string) => void;
   filterTrangThai: string;
   onFilterTrangThaiChange: (v: string) => void;
+  filterNganh?: string;
+  onFilterNganhChange?: (v: string) => void;
+  nganhOptions?: NganhOption[];
 }
 
 function SortIcon({ col, sortConfig }: { col: string; sortConfig: { key: string; direction: string } | null }) {
@@ -31,7 +36,7 @@ function SortIcon({ col, sortConfig }: { col: string; sortConfig: { key: string;
     : <IconArrowDown className="ml-1 inline h-3.5 w-3.5 text-teal-600" />;
 }
 
-export function SinhVienTable({ rows, onEdit, onDelete, onRowClick, search, onSearchChange, filterTrangThai, onFilterTrangThaiChange }: Props) {
+export function SinhVienTable({ rows, onEdit, onDelete, onRowClick, search, onSearchChange, filterTrangThai, onFilterTrangThaiChange, filterNganh, onFilterNganhChange, nganhOptions }: Props) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -63,6 +68,19 @@ export function SinhVienTable({ rows, onEdit, onDelete, onRowClick, search, onSe
               <SelectItem value="Tốt nghiệp">Tốt nghiệp</SelectItem>
             </SelectContent>
           </Select>
+          {nganhOptions && onFilterNganhChange && (
+            <Select value={filterNganh || 'all'} onValueChange={(v) => { onFilterNganhChange(v === 'all' ? '' : v); setPage(1); }}>
+              <SelectTrigger className="w-52">
+                <SelectValue placeholder="Ngành học" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả ngành</SelectItem>
+                {nganhOptions.map((n) => (
+                  <SelectItem key={n.MaNganh} value={n.MaNganh}>{n.TenNganh}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
 
         {rows.length === 0 ? (

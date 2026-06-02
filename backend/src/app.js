@@ -94,7 +94,7 @@ app.use('/api/diem', diemRouter);
 app.use('/api/que-quan', queQuanRouter);
 app.use('/api/doi-tuong', doiTuongRouter);
 app.use('/api/don-gia-han', donGiaHanRouter);
-app.use('/api', masterDataRouter); // /api/hoc-ky, /api/que-quan, /api/cau-hinh/gia, ...
+app.use('/api/master-data', masterDataRouter); // /api/master-data/hoc-ky, /api/master-data/tham-so, ...
 
 // ---------- 404 + Error handler (PHẢI ĐẶT CUỐI) ----------
 app.use(notFoundMiddleware);

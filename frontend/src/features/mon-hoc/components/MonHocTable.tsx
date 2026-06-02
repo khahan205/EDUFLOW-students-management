@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { IconEdit, IconTrash, IconArrowsSort, IconArrowUp, IconArrowDown } from '@tabler/icons-react';
+import { IconEdit, IconTrash, IconArrowsSort, IconArrowUp, IconArrowDown, IconLink } from '@tabler/icons-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -18,6 +18,7 @@ interface Props {
   rows: MonHoc[];
   onEdit: (mh: MonHoc) => void;
   onDelete: (mh: MonHoc) => void;
+  onManagePrereq?: (mh: MonHoc) => void;
   search: string;
   onSearchChange: (v: string) => void;
   filterLoaiMon: string;
@@ -31,7 +32,7 @@ function SortIcon({ col, sortConfig }: { col: string; sortConfig: { key: string;
     : <IconArrowDown className="ml-1 inline h-3.5 w-3.5 text-teal-600" />;
 }
 
-export function MonHocTable({ rows, onEdit, onDelete, search, onSearchChange, filterLoaiMon, onFilterLoaiMonChange }: Props) {
+export function MonHocTable({ rows, onEdit, onDelete, onManagePrereq, search, onSearchChange, filterLoaiMon, onFilterLoaiMonChange }: Props) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -102,6 +103,9 @@ export function MonHocTable({ rows, onEdit, onDelete, search, onSearchChange, fi
                       </Badge>
                     </TableCell>
                     <TableCell className="text-center">
+                      {onManagePrereq && (
+                        <ActionButton tone="confirm" icon={<IconLink className="h-3.5 w-3.5" />} label="Tiên quyết" onClick={() => onManagePrereq(mh)} />
+                      )}
                       <ActionButton tone="edit" icon={<IconEdit className="h-3.5 w-3.5" />} label="Sửa" onClick={() => onEdit(mh)} />
                       <ActionButton tone="delete" icon={<IconTrash className="h-3.5 w-3.5" />} label="Xoá" onClick={() => onDelete(mh)} />
                     </TableCell>

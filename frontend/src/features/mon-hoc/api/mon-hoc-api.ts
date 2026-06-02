@@ -51,7 +51,7 @@ export async function fetchPricingConfig(): Promise<PricingConfigInput> {
     await delay();
     return mockPricingConfig;
   }
-  const { data } = await apiClient.get<PricingConfigInput>('/cau-hinh/gia');
+  const { data } = await apiClient.get<PricingConfigInput>('/master-data/cau-hinh/gia');
   return data;
 }
 
@@ -61,6 +61,6 @@ export async function updatePricingConfig(input: PricingConfigInput): Promise<Pr
     Object.assign(mockPricingConfig, input);
     return input;
   }
-  const { data } = await apiClient.put<PricingConfigInput>('/cau-hinh/gia', input);
+  const { data } = await apiClient.put<PricingConfigInput>('/master-data/cau-hinh/gia', input);
   return data;
 }

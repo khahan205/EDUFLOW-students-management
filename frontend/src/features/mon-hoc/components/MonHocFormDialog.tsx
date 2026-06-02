@@ -62,13 +62,16 @@ export function MonHocFormDialog({ open, onOpenChange, editing }: Props) {
     if (open) form.reset(editing ? (editing as MonHocInput) : EMPTY);
   }, [open, editing, form]);
 
-  // QĐ2: Tự tính SoTinChi = SoTiet÷15 (LT) hoặc SoTiet÷30 (TH)
+  // QĐ2+QĐ5: Tự tính SoTinChi = SoTiet÷15 (LT) hoặc SoTiet÷30 (TH)
+  //           Tự tính HocPhi = SoTinChi × 27,000đ (LT) hoặc × 37,000đ (TH)
   const calcTinChi = useCallback(() => {
     const soTiet = form.getValues('SoTiet');
     const loai   = form.getValues('MaLoaiMon');
     if (soTiet && soTiet > 0) {
       const tc = Math.max(1, Math.round(soTiet / (loai === 'TH' ? 30 : 15)));
       form.setValue('SoTinChi', tc, { shouldValidate: true });
+      const donGia = loai === 'TH' ? 37_000 : 27_000;
+      form.setValue('HocPhi', tc * donGia, { shouldValidate: true });
     }
   }, [form]);
 
@@ -201,9 +204,12 @@ export function MonHocFormDialog({ open, onOpenChange, editing }: Props) {
                 name="HocPhi"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Học phí (VND)</FormLabel>
+                    <FormLabel>
+                      Học phí (VND)
+                      <span className="ml-1 text-xs font-normal text-slate-400">(TC×27k LT / TC×37k TH)</span>
+                    </FormLabel>
                     <FormControl>
-                      <Input type="number" min={0} step={100_000} {...field} />
+                      <Input type="number" min={0} step={1_000} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

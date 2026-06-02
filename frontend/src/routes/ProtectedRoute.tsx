@@ -19,6 +19,12 @@ export function ProtectedRoute({ allowedRoles, redirectTo, children }: Props = {
     return <Navigate to={ROUTES.LOGIN} replace state={{ from: location }} />;
   }
 
+  // Bắt buộc đổi mật khẩu nếu MustChangePassword = true
+  // Cho phép ở lại /change-password để không bị loop
+  if (user?.mustChangePassword && location.pathname !== ROUTES.CHANGE_PASSWORD) {
+    return <Navigate to={ROUTES.CHANGE_PASSWORD} replace />;
+  }
+
   if (allowedRoles && user?.role && !allowedRoles.includes(user.role as UserRole)) {
     return <Navigate to={redirectTo ?? ROUTES.DASHBOARD} replace />;
   }
