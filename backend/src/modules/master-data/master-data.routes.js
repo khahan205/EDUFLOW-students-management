@@ -74,7 +74,7 @@ router.put(
 
 router.delete(
   '/hoc-ky/:maHK',
-  requireRole('ADMIN'),
+  requireRole('ADMIN', 'PHONG_DAO_TAO'),
   asyncHandler(async (req, res) => {
     const hasData = await prisma.phieuHocPhi.count({ where: { MaHK: req.params.maHK } });
     if (hasData > 0) return res.status(409).json({ message: `Không thể xóa: học kỳ này đã có ${hasData} phiếu đăng ký.` });
