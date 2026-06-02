@@ -142,13 +142,28 @@ export async function getPricingConfig() {
 }
 
 export async function updatePricingConfig(input) {
-  const updates = Object.entries(PRICING_KEYS).map(([fe, db]) =>
+  // 1. Lưu ThamSo
+  const thamSoUpdates = Object.entries(PRICING_KEYS).map(([fe, db]) =>
     prisma.thamSo.upsert({
       where: { TenThamSo: db },
       update: { GiaTri: String(input[fe]) },
       create: { TenThamSo: db, GiaTri: String(input[fe]), KieuDuLieu: 'number', MoTa: fe === 'donGiaLT' ? 'Đơn giá Lý Thuyết / tín chỉ (VND)' : fe === 'donGiaTH' ? 'Đơn giá Thực Hành / tín chỉ (VND)' : null },
     }),
   );
-  await prisma.$transaction(updates);
+  await prisma.$transaction(thamSoUpdates);
+
+  // 2. Đồng bộ lại HocPhi của tất cả môn học theo giá mới
+  if (input.donGiaLT !== undefined || input.donGiaTH !== undefined) {
+    const config = await getPricingConfig();
+    const monHocs = await prisma.monHoc.findMany({ select: { MaMH: true, MaLoaiMon: true, SoTinChi: true } });
+    const monUpdates = monHocs.map((m) =>
+      prisma.monHoc.update({
+        where: { MaMH: m.MaMH },
+        data: { HocPhi: m.SoTinChi * (m.MaLoaiMon === 'TH' ? config.donGiaTH : config.donGiaLT) },
+      }),
+    );
+    await prisma.$transaction(monUpdates);
+  }
+
   return getPricingConfig();
 }

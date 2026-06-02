@@ -55,7 +55,8 @@ export function PricingConfigDialog({ open, onOpenChange }: Props) {
     mutationFn: updatePricingConfig,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['pricing-config'] });
-      toast.success('Đã lưu cấu hình giá');
+      qc.invalidateQueries({ queryKey: ['mon-hoc'] }); // sync lại giá môn học
+      toast.success('Đã lưu cấu hình giá — giá các môn học đã được cập nhật tự động');
       onOpenChange(false);
     },
     onError: (err: { message?: string }) => toast.error(err.message ?? 'Lưu thất bại'),
