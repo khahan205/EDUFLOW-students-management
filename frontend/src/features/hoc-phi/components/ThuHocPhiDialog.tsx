@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { IconCash, IconBuildingBank } from '@tabler/icons-react';
+import { IconCash, IconBuildingBank, IconAlertTriangle } from '@tabler/icons-react';
 import {
   Dialog,
   DialogContent,
@@ -34,6 +34,7 @@ interface Props {
 }
 
 interface ThamSo { TenThamSo: string; GiaTri: string; }
+interface HocKyItem { MaHK: string; TenHK: string; NamHoc: string; NgayKetThuc: string | null; }
 
 function buildVietQRUrl(bankId: string, accountNo: string, accountName: string, amount: number, content: string) {
   const template = 'compact';
@@ -71,6 +72,20 @@ export function ThuHocPhiDialog({ open, onOpenChange, row }: Props) {
     staleTime: 300_000,
     enabled: open,
   });
+
+  // Kiểm tra thời hạn đóng học phí của học kỳ (QĐ6)
+  const hocKyQuery = useQuery({
+    queryKey: ['hoc-ky-list'],
+    queryFn: async () => {
+      const { data } = await apiClient.get<HocKyItem[]>('/master-data/hoc-ky');
+      return data;
+    },
+    staleTime: 300_000,
+    enabled: open && !!row,
+  });
+  const currentHK = hocKyQuery.data?.find((hk) => hk.MaHK === row?.MaHK);
+  const deadlineDate = currentHK?.NgayKetThuc ? new Date(currentHK.NgayKetThuc) : null;
+  const isDeadlinePassed = deadlineDate ? new Date() > deadlineDate : false;
 
   const thamSoMap = Object.fromEntries(
     (thamSoQuery.data ?? []).map((t) => [t.TenThamSo, t.GiaTri])
@@ -122,6 +137,19 @@ export function ThuHocPhiDialog({ open, onOpenChange, row }: Props) {
             Thu học phí — {row.TenSV}
           </DialogTitle>
         </DialogHeader>
+
+        {/* Cảnh báo quá hạn đóng học phí (QĐ6) */}
+        {isDeadlinePassed && (
+          <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <IconAlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <div>
+              <p className="font-semibold">Đã quá thời hạn đóng học phí</p>
+              <p className="mt-0.5 text-xs text-red-600">
+                Hạn chót: {deadlineDate!.toLocaleDateString('vi-VN')} — Không thể thu học phí sau thời hạn quy định.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Tóm tắt số tiền */}
         <div className="grid grid-cols-3 gap-3 rounded-lg bg-slate-50 p-3 text-sm">
@@ -239,7 +267,8 @@ export function ThuHocPhiDialog({ open, onOpenChange, row }: Props) {
               <Button
                 type="submit"
                 variant="success"
-                disabled={mutation.isPending || amountTooSmall}
+                disabled={mutation.isPending || amountTooSmall || isDeadlinePassed}
+                title={isDeadlinePassed ? `Quá hạn đóng HP: ${deadlineDate!.toLocaleDateString('vi-VN')}` : undefined}
               >
                 {mutation.isPending ? 'Đang thu...' : 'Xác nhận thu'}
               </Button>
