@@ -163,12 +163,12 @@ function AddDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: bo
   });
 
   const monHocQuery = useQuery({
-    queryKey: ['mon-hoc-list'],
+    queryKey: ['mon-hoc'],   // cùng key với MonHocPage → invalidation tự động khi thêm môn mới
     queryFn: async () => {
       const { data } = await apiClient.get<MonHocOption[]>('/mon-hoc');
       return data;
     },
-    staleTime: 300_000,
+    staleTime: 0,            // luôn fetch mới khi mở dialog
   });
 
   const selectedMH = (monHocQuery.data ?? []).find((m) => m.MaMH === maMH);

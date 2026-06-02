@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { IconUser, IconBook2, IconCashBanknote, IconChartBar, IconQrcode, IconBuildingBank, IconPlus, IconTrash, IconAlertCircle, IconCircleCheck } from '@tabler/icons-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +13,8 @@ import { exportToExcel } from '@/lib/export-excel';
 import { apiClient } from '@/services/api-client';
 
 interface MonHocOpen { MaMH: string; TenMH: string; SoTinChi: number; MaLoaiMon: string; TenKhoa: string; SiSoHienTai: number; SiSoToiDa: number; daDangKy: boolean; }
+interface MonMoResponse { MaHK: string; TenHK: string; NamHoc: string; monMo: MonHocOpen[]; }
+interface HocKyOption { MaHK: string; TenHK: string; NamHoc: string; LaHienTai: boolean; }
 interface DangKyInfo { HocKy: { MaHK: string; TenHK: string; NamHoc: string }; monHoc: { MaPhieu: string; MaMH: string; TenMH: string; SoTinChi: number; MaLoaiMon: string; SoTienPhaiDong: number }[]; TongPhaiDong: number; DaDong: number; ConLai: number; }
 interface PhieuThuItem { MaPhieuThu: string; NgayThu: string; SoTienThu: number; HinhThucTT: string; GhiChu: string; }
 interface Profile { MaSV: string; TenSV: string; NgaySinh: string | null; GioiTinh: string | null; TenLop: string | null; Email: string | null; TrangThai: string; nganh?: { TenNganh: string }; queQuan?: { TenTinh: string; huyen?: { TenHuyen: string } }; doiTuongUuTien?: { TenDoiTuong: string; TiLeGiamHocPhi: number }; }
@@ -70,36 +74,86 @@ export function StudentHoSoPage() {
 export function StudentDangKyPage() {
   const qc = useQueryClient();
   const { data: profile } = useProfile();
-  const { data: dangKy } = useDangKy();
-  const monMoQuery = useQuery({ queryKey: ['student-mon-mo'], queryFn: async () => { const { data } = await apiClient.get<MonHocOpen[]>('/student/mon-mo'); return data; } });
+  const [selectedMaHK, setSelectedMaHK] = useState('');
+
+  // Danh sách học kỳ có lớp mở (để SV chọn)
+  const hocKyQuery = useQuery({
+    queryKey: ['hoc-ky-list'],
+    queryFn: async () => { const { data } = await apiClient.get<HocKyOption[]>('/master-data/hoc-ky'); return data; },
+    staleTime: 300_000,
+  });
+
+  // Môn mở theo HK đã chọn (hoặc HK hiện tại nếu chưa chọn)
+  const monMoQuery = useQuery({
+    queryKey: ['student-mon-mo', selectedMaHK],
+    queryFn: async () => {
+      const params = selectedMaHK ? { maHK: selectedMaHK } : {};
+      const { data } = await apiClient.get<MonMoResponse>('/student/mon-mo', { params });
+      return data;
+    },
+  });
+
+  const activeHK = monMoQuery.data;
+  const maHKActive = activeHK?.MaHK ?? selectedMaHK;
+  const monMoList = activeHK?.monMo ?? [];
+
+  // Phiếu đăng ký của HK đang xem
+  const dangKyQuery = useQuery({
+    queryKey: ['student-dang-ky', maHKActive],
+    queryFn: async () => {
+      const params = maHKActive ? { maHK: maHKActive } : {};
+      const { data } = await apiClient.get<DangKyInfo>('/student/dang-ky', { params });
+      return data;
+    },
+    enabled: !!maHKActive,
+  });
+  const dangKy = dangKyQuery.data;
 
   const tcDaDangKy = (dangKy?.monHoc ?? []).reduce((s, m) => s + m.SoTinChi, 0);
   const tcConLai = TC_MAX - tcDaDangKy;
   const pctUsed = Math.min((tcDaDangKy / TC_MAX) * 100, 100);
 
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ['student-mon-mo', selectedMaHK] });
+    qc.invalidateQueries({ queryKey: ['student-dang-ky', maHKActive] });
+  };
+
   const registerMutation = useMutation({
-    mutationFn: async (maMH: string) => {
-      const sv = profile!.MaSV;
-      const maHK = dangKy!.HocKy.MaHK;
-      return apiClient.post('/dang-ky', { maSV: sv, maHK, maMH });
-    },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['student-mon-mo'] }); qc.invalidateQueries({ queryKey: ['student-dang-ky'] }); toast.success('Đăng ký thành công'); },
+    mutationFn: async (maMH: string) =>
+      apiClient.post('/dang-ky', { maSV: profile!.MaSV, maHK: maHKActive, maMH }),
+    onSuccess: () => { invalidate(); toast.success('Đăng ký thành công'); },
     onError: (err: { message?: string }) => toast.error(err.message ?? 'Đăng ký thất bại'),
   });
 
   const unregisterMutation = useMutation({
-    mutationFn: async (maMH: string) => {
-      const sv = profile!.MaSV;
-      const maHK = dangKy!.HocKy.MaHK;
-      return apiClient.delete('/dang-ky', { data: { maSV: sv, maHK, maMH } });
-    },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['student-mon-mo'] }); qc.invalidateQueries({ queryKey: ['student-dang-ky'] }); toast.success('Đã huỷ đăng ký'); },
+    mutationFn: async (maMH: string) =>
+      apiClient.delete('/dang-ky', { data: { maSV: profile!.MaSV, maHK: maHKActive, maMH } }),
+    onSuccess: () => { invalidate(); toast.success('Đã huỷ đăng ký'); },
     onError: (err: { message?: string }) => toast.error(err.message ?? 'Huỷ thất bại'),
   });
 
   return (
     <>
-      <PageHeader title="Đăng ký học phần" icon={<IconPlus className="h-4 w-4" />} iconTone="teal" />
+      <PageHeader
+        title="Đăng ký học phần"
+        icon={<IconPlus className="h-4 w-4" />}
+        iconTone="teal"
+        actions={
+          <Select value={selectedMaHK || 'current'} onValueChange={(v) => setSelectedMaHK(v === 'current' ? '' : v)}>
+            <SelectTrigger className="w-52">
+              <SelectValue placeholder="Học kỳ hiện tại" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="current">Học kỳ hiện tại</SelectItem>
+              {(hocKyQuery.data ?? []).map((hk) => (
+                <SelectItem key={hk.MaHK} value={hk.MaHK}>
+                  {hk.TenHK} {hk.NamHoc}{hk.LaHienTai ? ' ★' : ''}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        }
+      />
 
       {/* TC counter */}
       <Card className="mb-4">
@@ -121,7 +175,7 @@ export function StudentDangKyPage() {
             <div className={`h-2 rounded-full transition-all ${tcDaDangKy >= TC_MAX ? 'bg-red-500 w-full' : tcDaDangKy >= 25 ? 'bg-amber-500' : 'bg-teal-500'}`}
               style={tcDaDangKy < TC_MAX ? { width: `${pctUsed}%` } : undefined} />
           </div>
-          {dangKy?.HocKy && <p className="mt-2 text-xs text-slate-400">Học kỳ: {dangKy.HocKy.TenHK} {dangKy.HocKy.NamHoc}</p>}
+          {activeHK && <p className="mt-2 text-xs text-slate-400">Học kỳ: {activeHK.TenHK} {activeHK.NamHoc}</p>}
         </CardContent>
       </Card>
 
@@ -129,8 +183,8 @@ export function StudentDangKyPage() {
         <CardHeader><CardTitle className="text-sm">Danh sách môn học mở — nhấn nút để đăng ký hoặc huỷ</CardTitle></CardHeader>
         <CardContent className="p-0">
           {monMoQuery.isLoading && <div className="m-4 h-40 animate-pulse rounded-lg bg-slate-100" />}
-          {!monMoQuery.isLoading && (monMoQuery.data ?? []).length === 0 && <EmptyState message="Chưa có môn học mở trong học kỳ này" />}
-          {(monMoQuery.data ?? []).length > 0 && (
+          {!monMoQuery.isLoading && monMoList.length === 0 && <EmptyState message="Chưa có môn học mở trong học kỳ này" />}
+          {monMoList.length > 0 && (
             <Table>
               <TableHeader><TableRow>
                 <TableHead>Mã môn</TableHead><TableHead>Tên môn học</TableHead>
@@ -138,7 +192,7 @@ export function StudentDangKyPage() {
                 <TableHead className="text-center">Sĩ số</TableHead><TableHead className="text-center">Trạng thái</TableHead>
                 <TableHead className="text-center">Thao tác</TableHead>
               </TableRow></TableHeader>
-              <TableBody>{(monMoQuery.data ?? []).map(m => {
+              <TableBody>{monMoList.map(m => {
                 const wouldExceed = !m.daDangKy && (tcDaDangKy + m.SoTinChi > TC_MAX);
                 const isFull = m.SiSoHienTai >= m.SiSoToiDa;
                 return (

@@ -25,12 +25,15 @@ router.get('/me', isSinhVien, asyncHandler(async (req, res) => {
   res.json({ ...sv, MaTK: tk.MaTK, Username: tk.Username });
 }));
 
-// Xem mon hoc mo trong HK hien tai
+// Xem mon hoc mo trong HK (mac dinh = HK hien tai, ho tro ?maHK= de chon HK khac)
 router.get('/mon-mo', isSinhVien, asyncHandler(async (req, res) => {
   const tk = await prisma.taiKhoan.findUnique({ where: { MaTK: req.user.MaTK } });
   if (!tk?.MaSV) throw ApiError.notFound('Chua lien ket.');
-  const hk = await prisma.hocKy.findFirst({ where: { LaHienTai: true } });
-  if (!hk) throw ApiError.notFound('Chua co hoc ky hien tai.');
+  const { maHK } = req.query;
+  const hk = maHK
+    ? await prisma.hocKy.findUnique({ where: { MaHK: maHK } })
+    : await prisma.hocKy.findFirst({ where: { LaHienTai: true } });
+  if (!hk) throw ApiError.notFound('Khong tim thay hoc ky.');
   const monMo = await prisma.monHocMo.findMany({
     where: { MaHK: hk.MaHK },
     include: { monHoc: true },
@@ -40,7 +43,11 @@ router.get('/mon-mo', isSinhVien, asyncHandler(async (req, res) => {
     select: { MaMH: true },
   });
   const daSet = new Set(daDangKy.map(p => p.MaMH));
-  res.json(monMo.map(m => ({ ...m.monHoc, daDangKy: daSet.has(m.monHoc.MaMH) })));
+  // Tra ve kem thong tin HK de FE hien thi
+  res.json({
+    MaHK: hk.MaHK, TenHK: hk.TenHK, NamHoc: hk.NamHoc,
+    monMo: monMo.map(m => ({ ...m.monHoc, daDangKy: daSet.has(m.monHoc.MaMH) })),
+  });
 }));
 
 // Xem cac mon da dang ky
