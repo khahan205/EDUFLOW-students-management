@@ -18,12 +18,12 @@ import { apiClient } from '@/services/api-client';
 
 interface HocKyRow {
   MaHK: string; TenHK: string; NamHoc: string; LaHienTai: boolean;
-  NgayBatDau: string | null; NgayKetThuc: string | null;
+  NgayBatDau: string | null; NgayKetThuc: string | null; HanDongHP: string | null;
 }
 
 const HK_OPTIONS = ['HK1', 'HK2', 'HK3 (Hè)'];
 
-const EMPTY = { MaHK: '', TenHK: 'HK1', NamHoc: '', NgayBatDau: '', NgayKetThuc: '' };
+const EMPTY = { MaHK: '', TenHK: 'HK1', NamHoc: '', NgayBatDau: '', NgayKetThuc: '', HanDongHP: '' };
 
 function HocKyDialog({ open, onOpenChange, editing }: { open: boolean; onOpenChange: (v: boolean) => void; editing: HocKyRow | null }) {
   const qc = useQueryClient();
@@ -37,6 +37,7 @@ function HocKyDialog({ open, onOpenChange, editing }: { open: boolean; onOpenCha
           MaHK: editing.MaHK, TenHK: editing.TenHK, NamHoc: editing.NamHoc,
           NgayBatDau: editing.NgayBatDau?.slice(0, 10) ?? '',
           NgayKetThuc: editing.NgayKetThuc?.slice(0, 10) ?? '',
+          HanDongHP: editing.HanDongHP?.slice(0, 10) ?? '',
         });
       } else {
         const now = new Date();
@@ -57,8 +58,8 @@ function HocKyDialog({ open, onOpenChange, editing }: { open: boolean; onOpenCha
 
   const mutation = useMutation({
     mutationFn: () => isEdit
-      ? apiClient.put(`/master-data/hoc-ky/${editing!.MaHK}`, { TenHK: form.TenHK, NamHoc: form.NamHoc, NgayBatDau: form.NgayBatDau || null, NgayKetThuc: form.NgayKetThuc || null })
-      : apiClient.post('/master-data/hoc-ky', { MaHK: form.MaHK, TenHK: form.TenHK, NamHoc: form.NamHoc, NgayBatDau: form.NgayBatDau || null, NgayKetThuc: form.NgayKetThuc || null }),
+      ? apiClient.put(`/master-data/hoc-ky/${editing!.MaHK}`, { TenHK: form.TenHK, NamHoc: form.NamHoc, NgayBatDau: form.NgayBatDau || null, NgayKetThuc: form.NgayKetThuc || null, HanDongHP: form.HanDongHP || null })
+      : apiClient.post('/master-data/hoc-ky', { MaHK: form.MaHK, TenHK: form.TenHK, NamHoc: form.NamHoc, NgayBatDau: form.NgayBatDau || null, NgayKetThuc: form.NgayKetThuc || null, HanDongHP: form.HanDongHP || null }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['hoc-ky-all'] });
       qc.invalidateQueries({ queryKey: ['hoc-ky-list'] });
@@ -101,6 +102,14 @@ function HocKyDialog({ open, onOpenChange, editing }: { open: boolean; onOpenCha
               <Label>Ngày kết thúc</Label>
               <Input type="date" value={form.NgayKetThuc} onChange={e => setForm(f => ({ ...f, NgayKetThuc: e.target.value }))} />
             </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="flex items-center gap-2">
+              Hạn đóng học phí
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">QĐ6</span>
+            </Label>
+            <Input type="date" value={form.HanDongHP} onChange={e => setForm(f => ({ ...f, HanDongHP: e.target.value }))} />
+            <p className="text-xs text-slate-400">Sinh viên đóng sau ngày này → hệ thống ghi "Trễ hạn". Để trống nếu dùng Ngày kết thúc làm mốc.</p>
           </div>
         </div>
         <DialogFooter>
@@ -185,6 +194,7 @@ export function HocKyPage() {
                     <TableHead>Học kỳ</TableHead>
                     <TableHead>Ngày bắt đầu</TableHead>
                     <TableHead>Ngày kết thúc</TableHead>
+                    <TableHead className="text-amber-700">Hạn đóng HP</TableHead>
                     <TableHead className="text-center">Trạng thái</TableHead>
                     <TableHead className="text-center">Thao tác</TableHead>
                   </TableRow>
@@ -199,6 +209,9 @@ export function HocKyPage() {
                       </TableCell>
                       <TableCell className="text-slate-500">
                         {hk.NgayKetThuc ? new Date(hk.NgayKetThuc).toLocaleDateString('vi-VN') : '—'}
+                      </TableCell>
+                      <TableCell className={hk.HanDongHP ? 'font-semibold text-amber-700' : 'text-slate-400'}>
+                        {hk.HanDongHP ? new Date(hk.HanDongHP).toLocaleDateString('vi-VN') : '—'}
                       </TableCell>
                       <TableCell className="text-center">
                         {hk.LaHienTai ? (

@@ -23,7 +23,7 @@ router.post(
   '/hoc-ky',
   requireRole('ADMIN', 'PHONG_DAO_TAO'),
   asyncHandler(async (req, res) => {
-    const { MaHK, TenHK, NamHoc, NgayBatDau, NgayKetThuc } = req.body;
+    const { MaHK, TenHK, NamHoc, NgayBatDau, NgayKetThuc, HanDongHP } = req.body;
     if (!MaHK || !TenHK || !NamHoc) return res.status(400).json({ message: 'Thieu thong tin hoc ky.' });
     const exists = await prisma.hocKy.findUnique({ where: { MaHK } });
     if (exists) return res.status(409).json({ message: `Mã học kỳ "${MaHK}" đã tồn tại.` });
@@ -32,6 +32,7 @@ router.post(
         MaHK, TenHK, NamHoc, LaHienTai: false,
         NgayBatDau: NgayBatDau ? new Date(NgayBatDau) : null,
         NgayKetThuc: NgayKetThuc ? new Date(NgayKetThuc) : null,
+        HanDongHP: HanDongHP ? new Date(HanDongHP) : null,
       },
     });
     res.status(201).json(hk);
@@ -42,7 +43,7 @@ router.put(
   '/hoc-ky/:maHK',
   requireRole('ADMIN', 'PHONG_DAO_TAO'),
   asyncHandler(async (req, res) => {
-    const { TenHK, NamHoc, NgayBatDau, NgayKetThuc } = req.body;
+    const { TenHK, NamHoc, NgayBatDau, NgayKetThuc, HanDongHP } = req.body;
     const hk = await prisma.hocKy.findUnique({ where: { MaHK: req.params.maHK } });
     if (!hk) return res.status(404).json({ message: 'Học kỳ không tồn tại.' });
     const updated = await prisma.hocKy.update({
@@ -52,6 +53,7 @@ router.put(
         NamHoc: NamHoc ?? hk.NamHoc,
         NgayBatDau: NgayBatDau ? new Date(NgayBatDau) : hk.NgayBatDau,
         NgayKetThuc: NgayKetThuc ? new Date(NgayKetThuc) : hk.NgayKetThuc,
+        HanDongHP: HanDongHP !== undefined ? (HanDongHP ? new Date(HanDongHP) : null) : hk.HanDongHP,
       },
     });
     res.json(updated);

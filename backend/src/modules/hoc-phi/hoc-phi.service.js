@@ -71,8 +71,9 @@ export async function listHocPhiRows() {
 export async function getHistory(maSV, maHK) {
   const [rows, hk] = await Promise.all([
     prisma.phieuThu.findMany({ where: { MaSV: maSV, MaHK: maHK }, orderBy: { NgayThu: 'asc' } }),
-    prisma.hocKy.findUnique({ where: { MaHK: maHK }, select: { NgayKetThuc: true } }),
+    prisma.hocKy.findUnique({ where: { MaHK: maHK }, select: { HanDongHP: true, NgayKetThuc: true } }),
   ]);
+  const deadline = hk?.HanDongHP ?? hk?.NgayKetThuc ?? null;
   return rows.map((p) => ({
     MaPhieuThu: p.MaPhieuThu,
     MaSV: p.MaSV,
@@ -81,7 +82,7 @@ export async function getHistory(maSV, maHK) {
     SoTienThu: Number(p.SoTienThu),
     HinhThucTT: p.HinhThucTT,
     GhiChu: p.GhiChu,
-    TreLan: hk?.NgayKetThuc ? p.NgayThu > hk.NgayKetThuc : false,
+    TreLan: deadline ? p.NgayThu > deadline : false,
   }));
 }
 
@@ -97,11 +98,12 @@ export async function getHistory(maSV, maHK) {
  */
 export async function pay({ maSV, maHK, soTien, ghiChu, hinhThucTT }) {
   return prisma.$transaction(async (tx) => {
-    // QĐ6: Kiểm tra thời hạn — vẫn cho thu nhưng ghi chú trễ hạn để tracking
+    // QĐ6: Kiểm tra hạn đóng học phí — dùng HanDongHP (do cán bộ set), fallback NgayKetThuc
     const hk = await tx.hocKy.findUnique({ where: { MaHK: maHK } });
-    const treHan = hk?.NgayKetThuc && new Date() > new Date(hk.NgayKetThuc);
+    const deadline = hk?.HanDongHP ?? hk?.NgayKetThuc ?? null;
+    const treHan = deadline && new Date() > new Date(deadline);
     if (treHan) {
-      const hanStr = new Date(hk.NgayKetThuc).toLocaleDateString('vi-VN');
+      const hanStr = new Date(deadline).toLocaleDateString('vi-VN');
       ghiChu = ghiChu
         ? `[Đóng trễ hạn ${hanStr}] ${ghiChu}`
         : `Đóng trễ hạn quy định (hạn chót: ${hanStr})`;
@@ -266,8 +268,9 @@ export async function searchPhieuThu({ maPhieuThu, maSV, maHK, ngayThu }) {
 
   // Lấy NgayKetThuc của các HK liên quan để xác định đóng đúng hạn hay trễ
   const maHKs = [...new Set(rows.map((r) => r.MaHK))];
-  const hkList = await prisma.hocKy.findMany({ where: { MaHK: { in: maHKs } }, select: { MaHK: true, NgayKetThuc: true } });
-  const hkDeadlineMap = Object.fromEntries(hkList.map((h) => [h.MaHK, h.NgayKetThuc]));
+  const hkList = await prisma.hocKy.findMany({ where: { MaHK: { in: maHKs } }, select: { MaHK: true, HanDongHP: true, NgayKetThuc: true } });
+  // Ưu tiên HanDongHP (cán bộ set), fallback NgayKetThuc
+  const hkDeadlineMap = Object.fromEntries(hkList.map((h) => [h.MaHK, h.HanDongHP ?? h.NgayKetThuc]));
 
   return rows.map((r) => {
     const key = `${r.MaSV}||${r.MaHK}`;

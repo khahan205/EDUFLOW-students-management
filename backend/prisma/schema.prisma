@@ -217,6 +217,7 @@ model HocKy {
   LaHienTai    Boolean       @default(false)    // chỉ có 1 HK active
   NgayBatDau   DateTime?     @db.Date
   NgayKetThuc  DateTime?     @db.Date
+  HanDongHP    DateTime?     @db.Date  // Hạn đóng học phí — cán bộ set riêng
 
   monHocMos    MonHocMo[]
   phieuHocPhis PhieuHocPhi[]
