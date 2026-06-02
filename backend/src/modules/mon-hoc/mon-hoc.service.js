@@ -1,15 +1,19 @@
 import { prisma } from '../../config/prisma.js';
 import { ApiError } from '../../utils/api-error.js';
 
-function toResponse(mh) {
+// HocPhi tính động từ ThamSo — không lưu cố định trong DB
+function toResponse(mh, config = null) {
   if (!mh) return null;
+  const donGia = config
+    ? (mh.MaLoaiMon === 'TH' ? config.donGiaTH : config.donGiaLT)
+    : Number(mh.HocPhi); // fallback nếu chưa có config
   return {
     MaMH: mh.MaMH,
     TenMH: mh.TenMH,
     MaLoaiMon: mh.MaLoaiMon,
     SoTiet: mh.SoTiet,
     SoTinChi: mh.SoTinChi,
-    HocPhi: Number(mh.HocPhi),
+    HocPhi: config ? mh.SoTinChi * donGia : donGia,
     HocKy: mh.HocKy,
     TenKhoa: mh.TenKhoa,
     SiSoHienTai: mh.SiSoHienTai,
@@ -18,14 +22,20 @@ function toResponse(mh) {
 }
 
 export async function list() {
-  const rows = await prisma.monHoc.findMany({ orderBy: { MaMH: 'asc' } });
-  return rows.map(toResponse);
+  const [rows, config] = await Promise.all([
+    prisma.monHoc.findMany({ orderBy: { MaMH: 'asc' } }),
+    getPricingConfig(),
+  ]);
+  return rows.map((mh) => toResponse(mh, config));
 }
 
 export async function getByMa(maMH) {
-  const mh = await prisma.monHoc.findUnique({ where: { MaMH: maMH } });
+  const [mh, config] = await Promise.all([
+    prisma.monHoc.findUnique({ where: { MaMH: maMH } }),
+    getPricingConfig(),
+  ]);
   if (!mh) throw ApiError.notFound(`Không tìm thấy môn học "${maMH}".`);
-  return toResponse(mh);
+  return toResponse(mh, config);
 }
 
 export async function create(input) {
@@ -142,7 +152,7 @@ export async function getPricingConfig() {
 }
 
 export async function updatePricingConfig(input) {
-  // 1. Lưu ThamSo
+  // Lưu ThamSo — HocPhi trong MonHoc tính động nên không cần sync
   const thamSoUpdates = Object.entries(PRICING_KEYS).map(([fe, db]) =>
     prisma.thamSo.upsert({
       where: { TenThamSo: db },
@@ -151,19 +161,5 @@ export async function updatePricingConfig(input) {
     }),
   );
   await prisma.$transaction(thamSoUpdates);
-
-  // 2. Đồng bộ lại HocPhi của tất cả môn học theo giá mới
-  if (input.donGiaLT !== undefined || input.donGiaTH !== undefined) {
-    const config = await getPricingConfig();
-    const monHocs = await prisma.monHoc.findMany({ select: { MaMH: true, MaLoaiMon: true, SoTinChi: true } });
-    const monUpdates = monHocs.map((m) =>
-      prisma.monHoc.update({
-        where: { MaMH: m.MaMH },
-        data: { HocPhi: m.SoTinChi * (m.MaLoaiMon === 'TH' ? config.donGiaTH : config.donGiaLT) },
-      }),
-    );
-    await prisma.$transaction(monUpdates);
-  }
-
   return getPricingConfig();
 }
