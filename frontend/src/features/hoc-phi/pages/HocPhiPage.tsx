@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { IconCashBanknote, IconFileSpreadsheet } from '@tabler/icons-react';
 import { useReactToPrint } from 'react-to-print';
@@ -285,6 +285,18 @@ export function HocPhiPage() {
 
   const printRef = useRef<HTMLDivElement>(null);
   const listQuery = useQuery({ queryKey: ['hoc-phi'], queryFn: fetchHocPhiRows });
+
+  // Auto-select học kỳ hiện tại khi dữ liệu load xong
+  const currentHKQuery = useQuery({
+    queryKey: ['hoc-ky-current'],
+    queryFn: async () => { const { data } = await apiClient.get<{ MaHK: string; TenHK: string; NamHoc: string }>('/master-data/hoc-ky/current'); return data; },
+    staleTime: 300_000,
+  });
+  useEffect(() => {
+    if (currentHKQuery.data && !filterHK) {
+      setFilterHK(currentHKQuery.data.MaHK);
+    }
+  }, [currentHKQuery.data, filterHK]);
 
   const filtered = useMemo(() => {
     if (!listQuery.data) return [];
