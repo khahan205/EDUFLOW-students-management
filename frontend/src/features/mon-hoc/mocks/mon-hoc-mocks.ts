@@ -25,9 +25,8 @@ export const monHocStore = {
 
 /** Tham số đơn giá tín chỉ (mock). Backend sẽ trả về từ bảng ThamSo. */
 export const mockPricingConfig = {
-  donGiaTinChi: 500_000,
-  heSoLT: 1.0,
-  heSoTH: 1.5,
+  donGiaLT: 27_000,
+  donGiaTH: 37_000,
   tiLeMienGiamTopDau: 0.5,
   tiLeMienGiamVungSauVungXa: 0.3,
 };

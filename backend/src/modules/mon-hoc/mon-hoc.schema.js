@@ -25,9 +25,8 @@ export const monHocCreateSchema = monHocBaseSchema.refine(
 export const monHocUpdateSchema = monHocBaseSchema.omit({ MaMH: true }).partial();
 
 export const pricingConfigSchema = z.object({
-  donGiaTinChi: z.coerce.number().min(0),
-  heSoLT: z.coerce.number().min(0),
-  heSoTH: z.coerce.number().min(0),
+  donGiaLT: z.coerce.number().min(0, 'Đơn giá LT không âm'),
+  donGiaTH: z.coerce.number().min(0, 'Đơn giá TH không âm'),
   tiLeMienGiamTopDau: z.coerce.number().min(0).max(1),
   tiLeMienGiamVungSauVungXa: z.coerce.number().min(0).max(1),
 });

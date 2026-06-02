@@ -120,10 +120,10 @@ export async function removeYeuCau(maMH, maMHYeuCau) {
 //  PRICING CONFIG — đọc/ghi vào bảng ThamSo
 // =============================================================================
 
+// Theo QĐ5: LT = 27.000đ/TC, TH = 37.000đ/TC (configurable qua BM15)
 const PRICING_KEYS = {
-  donGiaTinChi: 'don_gia_tin_chi',
-  heSoLT: 'he_so_lt',
-  heSoTH: 'he_so_th',
+  donGiaLT: 'don_gia_lt',                              // Đơn giá Lý Thuyết / tín chỉ
+  donGiaTH: 'don_gia_th',                              // Đơn giá Thực Hành / tín chỉ
   tiLeMienGiamTopDau: 'ti_le_mien_giam_top_dau',
   tiLeMienGiamVungSauVungXa: 'ti_le_mien_giam_vung_sau_xa',
 };
@@ -134,9 +134,8 @@ export async function getPricingConfig() {
   });
   const map = Object.fromEntries(rows.map((r) => [r.TenThamSo, parseFloat(r.GiaTri)]));
   return {
-    donGiaTinChi: map[PRICING_KEYS.donGiaTinChi] ?? 500000,
-    heSoLT: map[PRICING_KEYS.heSoLT] ?? 1.0,
-    heSoTH: map[PRICING_KEYS.heSoTH] ?? 1.5,
+    donGiaLT: map[PRICING_KEYS.donGiaLT] ?? 27000,
+    donGiaTH: map[PRICING_KEYS.donGiaTH] ?? 37000,
     tiLeMienGiamTopDau: map[PRICING_KEYS.tiLeMienGiamTopDau] ?? 0.5,
     tiLeMienGiamVungSauVungXa: map[PRICING_KEYS.tiLeMienGiamVungSauVungXa] ?? 0.3,
   };
@@ -147,7 +146,7 @@ export async function updatePricingConfig(input) {
     prisma.thamSo.upsert({
       where: { TenThamSo: db },
       update: { GiaTri: String(input[fe]) },
-      create: { TenThamSo: db, GiaTri: String(input[fe]), KieuDuLieu: 'number' },
+      create: { TenThamSo: db, GiaTri: String(input[fe]), KieuDuLieu: 'number', MoTa: fe === 'donGiaLT' ? 'Đơn giá Lý Thuyết / tín chỉ (VND)' : fe === 'donGiaTH' ? 'Đơn giá Thực Hành / tín chỉ (VND)' : null },
     }),
   );
   await prisma.$transaction(updates);

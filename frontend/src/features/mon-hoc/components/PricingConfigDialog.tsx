@@ -40,9 +40,8 @@ export function PricingConfigDialog({ open, onOpenChange }: Props) {
   const form = useForm<PricingConfigInput>({
     resolver: zodResolver(pricingConfigSchema),
     defaultValues: {
-      donGiaTinChi: 0,
-      heSoLT: 1,
-      heSoTH: 1.5,
+      donGiaLT: 27000,
+      donGiaTH: 37000,
       tiLeMienGiamTopDau: 0.5,
       tiLeMienGiamVungSauVungXa: 0.3,
     },
@@ -73,52 +72,45 @@ export function PricingConfigDialog({ open, onOpenChange }: Props) {
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit((v) => mutation.mutate(v))} className="space-y-3">
-            <FormField
-              control={form.control}
-              name="donGiaTinChi"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Đơn giá / tín chỉ (VND)</FormLabel>
-                  <FormControl>
-                    <Input type="number" min={0} step={10_000} {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Đơn giá học phí (QĐ5)</p>
             <div className="grid grid-cols-2 gap-3">
               <FormField
                 control={form.control}
-                name="heSoLT"
+                name="donGiaLT"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Hệ số LT</FormLabel>
+                    <FormLabel>Đơn giá Lý Thuyết / TC (VND)</FormLabel>
                     <FormControl>
-                      <Input type="number" step={0.1} {...field} />
+                      <Input type="number" min={0} step={1_000} {...field} />
                     </FormControl>
+                    <p className="text-xs text-slate-400">Mặc định: 27.000đ/TC</p>
                     <FormMessage />
                   </FormItem>
                 )}
               />
               <FormField
                 control={form.control}
-                name="heSoTH"
+                name="donGiaTH"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Hệ số TH</FormLabel>
+                    <FormLabel>Đơn giá Thực Hành / TC (VND)</FormLabel>
                     <FormControl>
-                      <Input type="number" step={0.1} {...field} />
+                      <Input type="number" min={0} step={1_000} {...field} />
                     </FormControl>
+                    <p className="text-xs text-slate-400">Mặc định: 37.000đ/TC</p>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+            </div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 pt-1">Tỉ lệ miễn giảm</p>
+            <div className="grid grid-cols-2 gap-3">
               <FormField
                 control={form.control}
                 name="tiLeMienGiamTopDau"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Miễn giảm top đầu (0-1)</FormLabel>
+                    <FormLabel>Miễn giảm top đầu (0–1)</FormLabel>
                     <FormControl>
                       <Input type="number" step={0.05} min={0} max={1} {...field} />
                     </FormControl>
@@ -131,7 +123,7 @@ export function PricingConfigDialog({ open, onOpenChange }: Props) {
                 name="tiLeMienGiamVungSauVungXa"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Miễn giảm vùng sâu (0-1)</FormLabel>
+                    <FormLabel>Miễn giảm vùng sâu (0–1)</FormLabel>
                     <FormControl>
                       <Input type="number" step={0.05} min={0} max={1} {...field} />
                     </FormControl>

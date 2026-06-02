@@ -86,6 +86,11 @@ export async function getMonMoChoSV(maSV, maHK) {
  *   - Round xuống đơn vị 1000 đồng
  */
 async function calculateTuition(sinhVien, monHoc) {
+  // Lấy đơn giá từ ThamSo (QĐ5: LT=27.000đ/TC, TH=37.000đ/TC — configurable)
+  const config = await getPricingConfig();
+  const donGia = monHoc.MaLoaiMon === 'TH' ? config.donGiaTH : config.donGiaLT;
+  const soTienDangKy = monHoc.SoTinChi * donGia;
+
   let tiLeGiam = 0;
 
   if (sinhVien.MaDoiTuong) {
@@ -95,19 +100,17 @@ async function calculateTuition(sinhVien, monHoc) {
     if (dt) tiLeGiam = Number(dt.TiLeGiamHocPhi);
   }
 
-  // Nếu SV thuộc vùng sâu vùng xa (gắn cờ trên huyện) → ưu tiên thêm
+  // Vùng sâu vùng xa → áp tỉ lệ giảm cao nhất (không cộng dồn)
   if (sinhVien.MaQueQuan) {
     const qq = await prisma.queQuan.findUnique({
       where: { MaQueQuan: sinhVien.MaQueQuan },
       include: { huyen: true },
     });
     if (qq?.huyen?.LaVungSauVungXa) {
-      const config = await getPricingConfig();
       tiLeGiam = Math.max(tiLeGiam, config.tiLeMienGiamVungSauVungXa);
     }
   }
 
-  const soTienDangKy = Number(monHoc.HocPhi);
   const soTienPhaiDong = Math.floor((soTienDangKy * (1 - tiLeGiam)) / 1000) * 1000;
 
   return { soTienDangKy, soTienPhaiDong };

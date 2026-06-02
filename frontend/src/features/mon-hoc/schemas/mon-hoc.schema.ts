@@ -15,9 +15,8 @@ export const monHocSchema = z.object({
 export type MonHocInput = z.infer<typeof monHocSchema>;
 
 export const pricingConfigSchema = z.object({
-  donGiaTinChi: z.coerce.number().min(0),
-  heSoLT: z.coerce.number().min(0),
-  heSoTH: z.coerce.number().min(0),
+  donGiaLT: z.coerce.number().min(0),
+  donGiaTH: z.coerce.number().min(0),
   tiLeMienGiamTopDau: z.coerce.number().min(0).max(1),
   tiLeMienGiamVungSauVungXa: z.coerce.number().min(0).max(1),
 });
