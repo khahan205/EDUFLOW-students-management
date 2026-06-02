@@ -206,11 +206,18 @@ export function MonHocFormDialog({ open, onOpenChange, editing }: Props) {
                   <FormItem>
                     <FormLabel>
                       Học phí (VND)
-                      <span className="ml-1 text-xs font-normal text-slate-400">(TC×27k LT / TC×37k TH)</span>
+                      <span className="ml-1 text-xs font-normal text-teal-600">— tự tính theo Tham số hệ thống</span>
                     </FormLabel>
                     <FormControl>
-                      <Input type="number" min={0} step={1_000} {...field} />
+                      <Input
+                        type="number"
+                        {...field}
+                        readOnly
+                        className="bg-slate-50 cursor-not-allowed text-teal-700 font-semibold"
+                        tabIndex={-1}
+                      />
                     </FormControl>
+                    <p className="text-xs text-slate-400">LT: SoTC × 27.000đ &nbsp;|&nbsp; TH: SoTC × 37.000đ</p>
                     <FormMessage />
                   </FormItem>
                 )}
