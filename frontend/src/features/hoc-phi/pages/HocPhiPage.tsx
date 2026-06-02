@@ -159,12 +159,13 @@ function PhieuDangKyTab() {
 }
 
 /* ── BM12: Tra cứu phiếu thu ── */
-interface PhieuThuRow2Extended extends PhieuThuRow2 { TongPhaiDong?: number; ConLai?: number; }
+interface PhieuThuRow2Extended extends PhieuThuRow2 { TongPhaiDong?: number; ConLai?: number; TreLan?: boolean; }
 
 function PhieuThuTab() {
   const [maPhieuThu, setMaPhieuThu] = useState('');
   const [maSV, setMaSV] = useState('');
   const [ngayThu, setNgayThu] = useState('');
+  const [filterTreLan, setFilterTreLan] = useState<'all' | 'tre' | 'dung'>('all');
   const [searched, setSearched] = useState(false);
 
   const query = useQuery({
@@ -182,8 +183,14 @@ function PhieuThuTab() {
     enabled: searched,
   });
 
-  const data = query.data ?? [];
+  const allData = query.data ?? [];
+  const data = useMemo(() => {
+    if (filterTreLan === 'all') return allData;
+    if (filterTreLan === 'tre') return allData.filter(r => (r as PhieuThuRow2Extended).TreLan);
+    return allData.filter(r => !(r as PhieuThuRow2Extended).TreLan);
+  }, [allData, filterTreLan]);
   const tongThu = useMemo(() => data.reduce((s, r) => s + r.SoTienThu, 0), [data]);
+  const soTreLan = allData.filter(r => (r as PhieuThuRow2Extended).TreLan).length;
 
   return (
     <div className="space-y-4">
@@ -201,13 +208,30 @@ function PhieuThuTab() {
             <p className="text-xs font-medium text-slate-500">Ngày lập</p>
             <Input type="date" value={ngayThu} onChange={(e) => setNgayThu(e.target.value)} className="w-40" />
           </div>
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-slate-500">Tình trạng</p>
+            <Select value={filterTreLan} onValueChange={(v) => setFilterTreLan(v as 'all' | 'tre' | 'dung')}>
+              <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả</SelectItem>
+                <SelectItem value="dung">✅ Đúng hạn</SelectItem>
+                <SelectItem value="tre">⚠ Trễ hạn</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <Button onClick={() => setSearched(true)}>Tra cứu</Button>
+          {searched && allData.length > 0 && soTreLan > 0 && (
+            <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+              ⚠ {soTreLan} phiếu trễ hạn
+            </span>
+          )}
           {searched && data.length > 0 && (
-            <Button variant="outline" onClick={() => exportToExcel(data, [
+            <Button variant="outline" onClick={() => exportToExcel(data.map(r => ({ ...r, TinhTrang: (r as PhieuThuRow2Extended).TreLan ? 'Trễ hạn' : 'Đúng hạn' })), [
               { header: 'Mã phiếu thu', key: 'MaPhieuThu' },
               { header: 'Mã SV', key: 'MaSV' }, { header: 'Họ tên', key: 'TenSV' },
               { header: 'Học kỳ', key: 'TenHK' }, { header: 'Năm học', key: 'NamHoc' },
               { header: 'Ngày thu', key: 'NgayThu' }, { header: 'Số tiền thu (đ)', key: 'SoTienThu' },
+              { header: 'Tình trạng', key: 'TinhTrang' },
               { header: 'Công nợ còn lại (đ)', key: 'ConLai' }, { header: 'Ghi chú', key: 'GhiChu' },
             ], 'phieu-thu')}>
               <IconFileSpreadsheet className="h-4 w-4" />Xuất Excel
@@ -234,6 +258,7 @@ function PhieuThuTab() {
                       <TableHead>Học kỳ</TableHead>
                       <TableHead>Ngày thu</TableHead>
                       <TableHead className="text-right">Số tiền thu</TableHead>
+                      <TableHead className="text-center">Tình trạng</TableHead>
                       <TableHead className="text-right text-red-600">Công nợ còn lại</TableHead>
                       <TableHead>Ghi chú</TableHead>
                     </TableRow>
@@ -249,6 +274,11 @@ function PhieuThuTab() {
                           {new Date(r.NgayThu).toLocaleDateString('vi-VN')}
                         </TableCell>
                         <TableCell className="text-right font-semibold text-emerald-700">{fmt(r.SoTienThu)}</TableCell>
+                        <TableCell className="text-center">
+                          {(r as PhieuThuRow2Extended).TreLan
+                            ? <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">⚠ Trễ hạn</span>
+                            : <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">✓ Đúng hạn</span>}
+                        </TableCell>
                         <TableCell className="text-right font-semibold">
                           {(r as PhieuThuRow2Extended).ConLai !== undefined ? (
                             (r as PhieuThuRow2Extended).ConLai! > 0

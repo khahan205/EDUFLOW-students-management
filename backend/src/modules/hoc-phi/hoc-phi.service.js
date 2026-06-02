@@ -69,10 +69,10 @@ export async function listHocPhiRows() {
  * Lịch sử thu của 1 SV trong 1 HK.
  */
 export async function getHistory(maSV, maHK) {
-  const rows = await prisma.phieuThu.findMany({
-    where: { MaSV: maSV, MaHK: maHK },
-    orderBy: { NgayThu: 'asc' },
-  });
+  const [rows, hk] = await Promise.all([
+    prisma.phieuThu.findMany({ where: { MaSV: maSV, MaHK: maHK }, orderBy: { NgayThu: 'asc' } }),
+    prisma.hocKy.findUnique({ where: { MaHK: maHK }, select: { NgayKetThuc: true } }),
+  ]);
   return rows.map((p) => ({
     MaPhieuThu: p.MaPhieuThu,
     MaSV: p.MaSV,
@@ -81,6 +81,7 @@ export async function getHistory(maSV, maHK) {
     SoTienThu: Number(p.SoTienThu),
     HinhThucTT: p.HinhThucTT,
     GhiChu: p.GhiChu,
+    TreLan: hk?.NgayKetThuc ? p.NgayThu > hk.NgayKetThuc : false,
   }));
 }
 
@@ -263,17 +264,24 @@ export async function searchPhieuThu({ maPhieuThu, maSV, maHK, ngayThu }) {
   const phaiDongMap = Object.fromEntries(phpAgg.map((r) => [`${r.MaSV}||${r.MaHK}`, Number(r._sum.SoTienPhaiDong) || 0]));
   const daThuMap    = Object.fromEntries(ptAgg.map((r) => [`${r.MaSV}||${r.MaHK}`, Number(r._sum.SoTienThu) || 0]));
 
+  // Lấy NgayKetThuc của các HK liên quan để xác định đóng đúng hạn hay trễ
+  const maHKs = [...new Set(rows.map((r) => r.MaHK))];
+  const hkList = await prisma.hocKy.findMany({ where: { MaHK: { in: maHKs } }, select: { MaHK: true, NgayKetThuc: true } });
+  const hkDeadlineMap = Object.fromEntries(hkList.map((h) => [h.MaHK, h.NgayKetThuc]));
+
   return rows.map((r) => {
     const key = `${r.MaSV}||${r.MaHK}`;
     const phaiDong = phaiDongMap[key] || 0;
     const daThu    = daThuMap[key] || 0;
     const conLai   = Math.max(0, phaiDong - daThu);
+    const deadline = hkDeadlineMap[r.MaHK];
     return {
       MaPhieuThu: r.MaPhieuThu, MaSV: r.MaSV, TenSV: r.sinhVien.TenSV,
       MaHK: r.MaHK, TenHK: r.hocKy.TenHK, NamHoc: r.hocKy.NamHoc,
       NgayThu: r.NgayThu.toISOString(), SoTienThu: Number(r.SoTienThu),
       HinhThucTT: r.HinhThucTT, GhiChu: r.GhiChu ?? '',
       TongPhaiDong: phaiDong, ConLai: conLai,
+      TreLan: deadline ? r.NgayThu > deadline : false,
     };
   });
 }
